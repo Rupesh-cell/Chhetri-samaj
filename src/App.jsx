@@ -165,7 +165,7 @@ const AdminPanel = ({ token, onLogout }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
+    if (!window.confirm('के तपाईं पक्का यो आइटम हटाउन चाहनुहुन्छ?')) return;
     if (activeTab === 'membership') await API.admin.deleteMembership(id, token);
     if (activeTab === 'news') await API.admin.deleteNews(id, token);
     if (activeTab === 'gallery') await API.admin.deleteGallery(id, token);
@@ -216,8 +216,8 @@ const AdminPanel = ({ token, onLogout }) => {
             <ShieldCheck size={28} />
           </div>
           <div className="logo-text">
-            <h5 className="mb-0">Samaj Admin</h5>
-            <small>Management Portal</small>
+            <h5 className="mb-0">समाज एडमिन</h5>
+            <small>व्यवस्थापन पोर्टल</small>
           </div>
         </div>
         
@@ -227,34 +227,34 @@ const AdminPanel = ({ token, onLogout }) => {
             className={`nav-item ${activeTab === 'membership' ? 'active' : ''}`}
           >
             <Users size={20} /> 
-            <span>Memberships</span>
+            <span>सदस्यताहरू</span>
           </Nav.Link>
           <Nav.Link 
             onClick={() => setActiveTab('news')} 
             className={`nav-item ${activeTab === 'news' ? 'active' : ''}`}
           >
             <Newspaper size={20} /> 
-            <span>News & Updates</span>
+            <span>समाचार र अपडेटहरू</span>
           </Nav.Link>
           <Nav.Link 
             onClick={() => setActiveTab('gallery')} 
             className={`nav-item ${activeTab === 'gallery' ? 'active' : ''}`}
           >
             <ImageIcon size={20} /> 
-            <span>Gallery</span>
+            <span>ग्यालरी</span>
           </Nav.Link>
           <Nav.Link 
             onClick={() => setActiveTab('partners')} 
             className={`nav-item ${activeTab === 'partners' ? 'active' : ''}`}
           >
             <ShieldCheck size={20} /> 
-            <span>Partners</span>
+            <span>साझेदारहरू</span>
           </Nav.Link>
           
           <div className="mt-auto pt-4 border-top border-white/10">
             <Nav.Link onClick={onLogout} className="nav-item logout">
               <LogOut size={20} /> 
-              <span>Sign Out</span>
+              <span>साइन आउट</span>
             </Nav.Link>
           </div>
         </Nav>
@@ -264,13 +264,13 @@ const AdminPanel = ({ token, onLogout }) => {
       <div className="admin-main">
         <header className="admin-header">
           <div className="header-left">
-            <h2 className="page-title">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h2>
-            <p className="page-subtitle">Manage your community {activeTab} content</p>
+            <h2 className="page-title">{activeTab === 'membership' ? 'सदस्यताहरू' : activeTab === 'news' ? 'समाचार' : activeTab === 'gallery' ? 'ग्यालरी' : 'साझेदारहरू'}</h2>
+            <p className="page-subtitle">आफ्नो सामुदायिक सामग्री व्यवस्थापन गर्नुहोस्</p>
           </div>
           <div className="header-right">
             {activeTab !== 'membership' && (
               <Button onClick={openAddModal} className="btn-add">
-                <Plus size={18} /> Add New
+                <Plus size={18} /> नयाँ थप्नुहोस्
               </Button>
             )}
           </div>
@@ -278,43 +278,43 @@ const AdminPanel = ({ token, onLogout }) => {
 
         <div className="admin-content-card">
           {loading ? (
-            <div className="p-5 text-center text-slate-400">Loading data...</div>
+            <div className="p-5 text-center text-slate-400">डाटा लोड हुँदैछ...</div>
           ) : (
             <Table hover responsive className="admin-table">
               <thead>
                 <tr>
                   {activeTab === 'membership' && (
                     <>
-                      <th>Applicant Info</th>
-                      <th>Contact</th>
-                      <th>Status</th>
+                      <th>आवेदकको विवरण</th>
+                      <th>सम्पर्क</th>
+                      <th>अवस्था</th>
                     </>
                   )}
                   {activeTab === 'news' && (
                     <>
-                      <th>Article Title</th>
-                      <th>Publish Date</th>
+                      <th>लेखको शीर्षक</th>
+                      <th>प्रकाशन मिति</th>
                     </>
                   )}
                   {activeTab === 'gallery' && (
                     <>
-                      <th>Image Title</th>
-                      <th>Preview</th>
+                      <th>तस्बिरको शीर्षक</th>
+                      <th>पूर्वावलोकन</th>
                     </>
                   )}
                   {activeTab === 'partners' && (
                     <>
-                      <th>Partner Name</th>
-                      <th>Logo</th>
+                      <th>साझेदारको नाम</th>
+                      <th>लोगो</th>
                     </>
                   )}
-                  <th className="text-end">Actions</th>
+                  <th className="text-end">कार्यहरू</th>
                 </tr>
               </thead>
               <tbody>
                 {data[activeTab].length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center p-5 text-slate-400">No records found</td>
+                    <td colSpan={5} className="text-center p-5 text-slate-400">कुनै रेकर्ड फेला परेन</td>
                   </tr>
                 ) : (
                   data[activeTab].map(item => (
@@ -328,7 +328,7 @@ const AdminPanel = ({ token, onLogout }) => {
                           <td>{item.phone}</td>
                           <td>
                             <span className={`status-badge ${item.status}`}>
-                              {item.status}
+                              {item.status === 'pending' ? 'पेन्डिङ' : 'अनुमोदित'}
                             </span>
                           </td>
                         </>
@@ -364,7 +364,7 @@ const AdminPanel = ({ token, onLogout }) => {
                               className="rounded-pill px-3"
                               onClick={() => handleApprove(item.id)}
                             >
-                              Approve
+                              अनुमोदन गर्नुहोस्
                             </Button>
                           )}
                           {activeTab !== 'membership' && (
@@ -373,7 +373,7 @@ const AdminPanel = ({ token, onLogout }) => {
                               onClick={() => handleEdit(item)} 
                               className="btn-action-edit text-slate-400 hover:text-primary"
                             >
-                              Edit
+                              सम्पादन गर्नुहोस्
                             </Button>
                           )}
                           <Button 
@@ -396,27 +396,27 @@ const AdminPanel = ({ token, onLogout }) => {
         {/* Add Modal */}
         <Modal show={showModal} onHide={() => setShowModal(false)} centered className="admin-modal" size={activeTab === 'news' ? 'lg' : undefined}>
           <Modal.Header closeButton>
-            <Modal.Title>{isEditing ? 'Edit' : 'Create New'} {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</Modal.Title>
+            <Modal.Title>{isEditing ? 'सम्पादन गर्नुहोस्' : 'नयाँ सिर्जना गर्नुहोस्'} {activeTab === 'news' ? 'समाचार' : activeTab === 'gallery' ? 'ग्यालरी' : 'साझेदार'}</Modal.Title>
           </Modal.Header>
           <Form onSubmit={handleSubmit}>
             <Modal.Body>
               {activeTab === 'news' && (
                 <>
                   <Form.Group className="mb-3">
-                    <Form.Label>Title</Form.Label>
-                    <Form.Control required value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    <Form.Label>शीर्षक</Form.Label>
+                    <Form.Control required className="form-input-samaj" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>Date</Form.Label>
-                    <Form.Control required placeholder="e.g. March 8, 2026" value={formData.date || ''} onChange={e => setFormData({...formData, date: e.target.value})} />
+                    <Form.Label>मिति</Form.Label>
+                    <Form.Control required className="form-input-samaj" placeholder="उदाहरण: मार्च ८, २०२६" value={formData.date || ''} onChange={e => setFormData({...formData, date: e.target.value})} />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>Image URL</Form.Label>
-                    <Form.Control required value={formData.image || ''} onChange={e => setFormData({...formData, image: e.target.value})} />
+                    <Form.Label>तस्बिरको URL</Form.Label>
+                    <Form.Control required className="form-input-samaj" value={formData.image || ''} onChange={e => setFormData({...formData, image: e.target.value})} />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>Content</Form.Label>
-                    <div className="quill-wrapper bg-white rounded-3 overflow-hidden border">
+                    <Form.Label>सामग्री</Form.Label>
+                    <div className="quill-wrapper bg-white rounded-3 overflow-hidden form-input-samaj">
                       <ReactQuill 
                         theme="snow" 
                         value={formData.content || ''} 
@@ -440,31 +440,31 @@ const AdminPanel = ({ token, onLogout }) => {
               {activeTab === 'gallery' && (
                 <>
                   <Form.Group className="mb-3">
-                    <Form.Label>Title</Form.Label>
-                    <Form.Control required value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
+                    <Form.Label>शीर्षक</Form.Label>
+                    <Form.Control required className="form-input-samaj" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>Image URL</Form.Label>
-                    <Form.Control required value={formData.image || ''} onChange={e => setFormData({...formData, image: e.target.value})} />
+                    <Form.Label>तस्बिरको URL</Form.Label>
+                    <Form.Control required className="form-input-samaj" value={formData.image || ''} onChange={e => setFormData({...formData, image: e.target.value})} />
                   </Form.Group>
                 </>
               )}
               {activeTab === 'partners' && (
                 <>
                   <Form.Group className="mb-3">
-                    <Form.Label>Partner Name</Form.Label>
-                    <Form.Control required value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
+                    <Form.Label>साझेदारको नाम</Form.Label>
+                    <Form.Control required className="form-input-samaj" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
                   </Form.Group>
                   <Form.Group className="mb-3">
-                    <Form.Label>Logo URL</Form.Label>
-                    <Form.Control required value={formData.logo || ''} onChange={e => setFormData({...formData, logo: e.target.value})} />
+                    <Form.Label>लोगोको URL</Form.Label>
+                    <Form.Control required className="form-input-samaj" value={formData.logo || ''} onChange={e => setFormData({...formData, logo: e.target.value})} />
                   </Form.Group>
                 </>
               )}
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="light" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button type="submit" className="btn-save">{isEditing ? 'Update Changes' : 'Publish Now'}</Button>
+              <Button variant="light" onClick={() => setShowModal(false)}>रद्द गर्नुहोस्</Button>
+              <Button type="submit" className="btn-save">{isEditing ? 'परिवर्तनहरू अद्यावधिक गर्नुहोस्' : 'अहिले प्रकाशन गर्नुहोस्'}</Button>
             </Modal.Footer>
           </Form>
         </Modal>
@@ -523,7 +523,7 @@ export default function App() {
       setShowLogin(false);
       setLoginError('');
     } else {
-      setLoginError('Invalid username or password');
+      setLoginError('गलत प्रयोगकर्ता नाम वा पासवर्ड');
     }
   };
 
@@ -542,23 +542,24 @@ export default function App() {
       {/* Navigation */}
       <Navbar expand="lg" fixed="top" className={`navbar-samaj ${scrolled ? 'scrolled shadow-sm' : 'navbar-transparent'}`}>
         <Container>
-          <Navbar.Brand href="#home" className="fw-bold">Nepal Chettri Samaj UAE</Navbar.Brand>
+          <Navbar.Brand href="#home" className="fw-bold">नेपाल क्षेत्री समाज युएई</Navbar.Brand>
           <Navbar.Toggle aria-controls="samaj-nav" className="border-0 shadow-none">
             <span className="navbar-toggler-icon"></span>
           </Navbar.Toggle>
           <Navbar.Collapse id="samaj-nav" className="justify-content-end">
             <Nav className="align-items-center">
-              <Nav.Link href="#home">Home</Nav.Link>
-              <Nav.Link href="#about">About</Nav.Link>
-              {news.length > 0 && <Nav.Link href="#news">News</Nav.Link>}
-              {gallery.length > 0 && <Nav.Link href="#gallery">Gallery</Nav.Link>}
-              <Nav.Link href="#membership">Join</Nav.Link>
+              <Nav.Link href="#home">गृहपृष्ठ</Nav.Link>
+              <Nav.Link href="#about">हाम्रो बारेमा</Nav.Link>
+              {news.length > 0 && <Nav.Link href="#news">समाचार</Nav.Link>}
+              {gallery.length > 0 && <Nav.Link href="#gallery">ग्यालरी</Nav.Link>}
+              {partners.length > 0 && <Nav.Link href="#partners">साझेदारहरू</Nav.Link>}
+              <Nav.Link href="#membership">आबद्ध हुनुहोस्</Nav.Link>
               <Button 
                 variant="link" 
                 onClick={() => setShowLogin(true)} 
                 className="nav-link text-primary fw-bold border-0 bg-transparent"
               >
-                Admin
+                एडमिन
               </Button>
             </Nav>
           </Navbar.Collapse>
@@ -571,11 +572,11 @@ export default function App() {
           <Row>
             <Col lg={8}>
               <Fade direction="up" cascade damping={0.1} triggerOnce={true}>
-                <h1>Preserving Culture, Empowering Community</h1>
-                <p className="mb-5">Welcome to Nepal Chettri Samaj UAE. We are dedicated to uniting the Chettri community in the UAE, preserving our rich heritage, and providing support to our members.</p>
+                <h1>संस्कृति संरक्षण, समुदाय सशक्तिकरण</h1>
+                <p className="mb-5">नेपाल क्षेत्री समाज युएईमा तपाईंलाई स्वागत छ। हामी युएईमा रहेका क्षेत्री समुदायलाई एकताबद्ध गर्न, हाम्रो समृद्ध सम्पदाको जगेर्ना गर्न र हाम्रा सदस्यहरूलाई सहयोग प्रदान गर्न समर्पित छौं।</p>
                 <div className="d-flex gap-3">
-                  <Button href="#membership" className="btn-samaj">Join Our Community</Button>
-                  <Button href="#about" variant="outline-light" className="rounded-pill px-5 py-3 border-2">Our Story</Button>
+                  <Button href="#membership" className="btn-samaj">हाम्रो समुदायमा जोडिनुहोस्</Button>
+                  <Button href="#about" variant="outline-light" className="rounded-pill px-5 py-3 border-2">हाम्रो कथा</Button>
                 </div>
               </Fade>
             </Col>
@@ -594,8 +595,8 @@ export default function App() {
                     <div className="feature-icon mb-4 bg-secondary/10 text-secondary rounded-circle d-inline-flex p-3">
                       <ShieldCheck size={32} />
                     </div>
-                    <h4 className="font-serif fw-bold mb-3">Preserving Culture</h4>
-                    <p className="text-slate-500 mb-0">We are dedicated to preserving our rich heritage and passing it to the next generation.</p>
+                    <h4 className="font-serif fw-bold mb-3">संस्कृति संरक्षण</h4>
+                    <p className="text-slate-500 mb-0">हामी हाम्रो समृद्ध सम्पदाको जगेर्ना गर्न र यसलाई भावी पुस्तामा हस्तान्तरण गर्न समर्पित छौं।</p>
                   </Card.Body>
                 </Card>
               </Fade>
@@ -607,8 +608,8 @@ export default function App() {
                     <div className="feature-icon mb-4 bg-primary/10 text-primary rounded-circle d-inline-flex p-3">
                       <Users size={32} />
                     </div>
-                    <h4 className="font-serif fw-bold mb-3">Empowering Community</h4>
-                    <p className="text-slate-500 mb-0">Uniting the Chettri community in the UAE through mutual support and brotherhood.</p>
+                    <h4 className="font-serif fw-bold mb-3">समुदाय सशक्तिकरण</h4>
+                    <p className="text-slate-500 mb-0">आपसी सहयोग र भ्रातृत्व मार्फत युएईमा क्षेत्री समुदायलाई एकताबद्ध गर्दै।</p>
                   </Card.Body>
                 </Card>
               </Fade>
@@ -620,8 +621,8 @@ export default function App() {
                     <div className="feature-icon mb-4 bg-dark/10 text-dark rounded-circle d-inline-flex p-3">
                       <UserPlus size={32} />
                     </div>
-                    <h4 className="font-serif fw-bold mb-3">Join Our Community</h4>
-                    <p className="text-slate-500 mb-0">Become a member today and access exclusive benefits and a supportive network.</p>
+                    <h4 className="font-serif fw-bold mb-3">हाम्रो समुदायमा जोडिनुहोस्</h4>
+                    <p className="text-slate-500 mb-0">आजै सदस्य बन्नुहोस् र विशेष लाभहरू र सहयोगी नेटवर्कमा पहुँच प्राप्त गर्नुहोस्।</p>
                   </Card.Body>
                 </Card>
               </Fade>
@@ -632,13 +633,24 @@ export default function App() {
 
       {/* Partners Section */}
       {partners.length > 0 && (
-        <section className="py-5 bg-light border-bottom">
+        <section id="partners" className="section-padding bg-light border-bottom">
           <Container>
-            <Row className="align-items-center justify-content-center gap-5">
+            <div className="text-center mb-5">
+              <h2 className="section-title">हाम्रा <span>साझेदारहरू</span></h2>
+              <p className="text-slate-500">हामीलाई सहयोग पुर्याउने आदरणीय संस्थाहरू</p>
+            </div>
+            <Row className="align-items-center justify-content-center g-4">
               {partners.map(partner => (
-                <Col xs="auto" key={partner.id}>
+                <Col md={3} sm={6} xs={12} key={partner.id}>
                   <Zoom triggerOnce={true}>
-                    <img src={partner.logo} alt={partner.name} className="partner-logo" referrerPolicy="no-referrer" />
+                    <Card className="partner-card h-100 border-0 shadow-sm p-4 text-center">
+                      <div className="d-flex align-items-center justify-content-center h-100" style={{ minHeight: '120px' }}>
+                        <img src={partner.logo} alt={partner.name} className="partner-logo-large" referrerPolicy="no-referrer" />
+                      </div>
+                      <div className="mt-3">
+                        <h6 className="mb-0 fw-bold text-dark">{partner.name}</h6>
+                      </div>
+                    </Card>
                   </Zoom>
                 </Col>
               ))}
@@ -653,17 +665,17 @@ export default function App() {
           <Row className="align-items-center g-5">
             <Col lg={6}>
               <Slide direction="left" triggerOnce={true}>
-                <h2 className="section-title">Our <span>Mission</span> & Vision</h2>
-                <p className="lead mb-4 fw-medium text-slate-600">Nepal Chettri Samaj UAE is a non-profit community organization established to foster unity and brotherhood among the Chettri community residing in the UAE.</p>
-                <p className="text-slate-500 mb-5 leading-relaxed">Our history dates back to the early days of the Nepali diaspora in the UAE, where a group of visionaries came together to create a platform for cultural preservation and mutual support. Today, we stand as a strong pillar for our community.</p>
+                <h2 className="section-title">हाम्रो <span>लक्ष्य</span> र दृष्टिकोण</h2>
+                <p className="lead mb-4 fw-medium text-slate-600">नेपाल क्षेत्री समाज युएई युएईमा बसोबास गर्ने क्षेत्री समुदायबीच एकता र भ्रातृत्व प्रवर्द्धन गर्न स्थापित एक गैर-नाफामूलक सामुदायिक संस्था हो।</p>
+                <p className="text-slate-500 mb-5 leading-relaxed">हाम्रो इतिहास युएईमा नेपाली प्रवासीहरूको सुरुवाती दिनहरूमा जान्छ, जहाँ दूरदर्शीहरूको समूहले सांस्कृतिक संरक्षण र आपसी सहयोगको लागि एक मञ्च सिर्जना गर्न एकजुट भएका थिए। आज, हामी हाम्रो समुदायको लागि एक बलियो स्तम्भको रूपमा उभिएका छौं।</p>
                 <div className="d-flex gap-4">
                   <div className="text-center p-4 bg-primary/10 rounded-4 flex-fill">
-                    <h3 className="font-serif text-primary mb-0">15+</h3>
-                    <small className="text-primary/70 uppercase fw-bold tracking-wider">Years</small>
+                    <h3 className="font-serif text-primary mb-0">१५+</h3>
+                    <small className="text-primary/70 uppercase fw-bold tracking-wider">वर्ष</small>
                   </div>
                   <div className="text-center p-4 bg-secondary/10 rounded-4 flex-fill">
-                    <h3 className="font-serif text-secondary mb-0">5k+</h3>
-                    <small className="text-secondary/70 uppercase fw-bold tracking-wider">Members</small>
+                    <h3 className="font-serif text-secondary mb-0">५k+</h3>
+                    <small className="text-secondary/70 uppercase fw-bold tracking-wider">सदस्यहरू</small>
                   </div>
                 </div>
               </Slide>
@@ -676,8 +688,8 @@ export default function App() {
                     <div className="d-flex align-items-center gap-3">
                       <div className="bg-primary text-white p-2 rounded-3"><ShieldCheck size={24} /></div>
                       <div>
-                        <h6 className="mb-0 fw-bold">Official Organization</h6>
-                        <small className="text-slate-500">Registered in UAE</small>
+                        <h6 className="mb-0 fw-bold">आधिकारिक संस्था</h6>
+                        <small className="text-slate-500">युएईमा दर्ता गरिएको</small>
                       </div>
                     </div>
                   </div>
@@ -693,7 +705,7 @@ export default function App() {
         <section id="news" className="section-padding bg-light/50">
           <Container>
             <div className="text-center mb-5">
-              <h2 className="section-title">Latest <span>Updates</span></h2>
+              <h2 className="section-title">पछिल्ला <span>जानकारीहरू</span></h2>
             </div>
             <Row>
               {news.map((item, idx) => (
@@ -708,7 +720,7 @@ export default function App() {
                         <Card.Title className="font-serif h4 mb-3">{item.title}</Card.Title>
                         <Card.Text className="text-slate-500">{item.content.replace(/<[^>]*>?/gm, '').substring(0, 100)}...</Card.Text>
                         <Button variant="link" className="text-primary p-0 fw-bold text-decoration-none d-flex align-items-center gap-2">
-                          Read Story <ArrowRight size={16} />
+                          थप पढ्नुहोस् <ArrowRight size={16} />
                         </Button>
                       </Card.Body>
                     </Card>
@@ -725,7 +737,7 @@ export default function App() {
         <section id="gallery" className="section-padding bg-light">
           <Container>
             <div className="text-center mb-5">
-              <h2 className="section-title">Our <span>Moments</span></h2>
+              <h2 className="section-title">हाम्रा <span>क्षणहरू</span></h2>
             </div>
             <div className="gallery-grid">
               {gallery.map((item, idx) => (
@@ -749,21 +761,21 @@ export default function App() {
           <Row className="align-items-center g-5">
             <Col lg={6}>
               <Fade direction="left" triggerOnce={true}>
-                <h2 className="font-serif display-4 fw-bold mb-4">Join Our Community</h2>
-                <p className="fs-5 opacity-90 mb-5 leading-relaxed">Be part of a supportive network that celebrates Chettri culture and provides mutual aid in the UAE.</p>
+                <h2 className="font-serif display-4 fw-bold mb-4">हाम्रो समुदायमा जोडिनुहोस्</h2>
+                <p className="fs-5 opacity-90 mb-5 leading-relaxed">युएईमा क्षेत्री संस्कृतिको उत्सव मनाउने र आपसी सहयोग प्रदान गर्ने सहयोगी नेटवर्कको हिस्सा बन्नुहोस्।</p>
                 <div className="d-flex flex-column gap-4">
                   <div className="d-flex align-items-center gap-4">
                     <div className="bg-white/20 p-3 rounded-circle"><UserPlus size={24} /></div>
                     <div>
-                      <h5 className="mb-1 fw-bold">Member Benefits</h5>
-                      <p className="mb-0 opacity-70">Access to exclusive events and community support.</p>
+                      <h5 className="mb-1 fw-bold">सदस्यताका फाइदाहरू</h5>
+                      <p className="mb-0 opacity-70">विशेष कार्यक्रमहरू र सामुदायिक सहयोगमा पहुँच।</p>
                     </div>
                   </div>
                   <div className="d-flex align-items-center gap-4">
                     <div className="bg-white/20 p-3 rounded-circle"><Calendar size={24} /></div>
                     <div>
-                      <h5 className="mb-1 fw-bold">Cultural Events</h5>
-                      <p className="mb-0 opacity-70">Celebrate Dashain, Tihar and more together.</p>
+                      <h5 className="mb-1 fw-bold">सांस्कृतिक कार्यक्रमहरू</h5>
+                      <p className="mb-0 opacity-70">दशैं, तिहार र अन्य चाडपर्वहरू सँगै मनाऔं।</p>
                     </div>
                   </div>
                 </div>
@@ -771,33 +783,49 @@ export default function App() {
             </Col>
             <Col lg={6}>
               <Fade direction="right" triggerOnce={true}>
-                <Card className="border-0 rounded-5 p-5 text-dark shadow-2xl">
-                  <h3 className="font-serif mb-4">Registration Form</h3>
+                <Card className="membership-form-card rounded-5 p-5 text-dark shadow-2xl">
+                  <h3 className="font-serif mb-4">दर्ता फारम</h3>
                   <Form onSubmit={async (e) => {
+                    const currentForm = e.currentTarget;
                     e.preventDefault();
-                    const formData = new FormData(e.currentTarget);
+                    const formData = new FormData(currentForm);
                     const data = {
                       name: formData.get('name'),
                       email: formData.get('email'),
-                      phone: formData.get('phone')
+                      phone: formData.get('phone'),
+                      honeypot: formData.get('website')
                     };
-                    await API.submitMembership(data);
-                    alert('Application submitted successfully!');
-                    e.currentTarget.reset();
+                    
+                    try {
+                      const res = await API.submitMembership(data);
+                      if (res.message && (res.message.includes('successfully') || res.message.includes('सफलतापूर्वक'))) {
+                        alert('आवेदन सफलतापूर्वक बुझाइयो! यसपछिको प्रक्रियाको लागि हाम्रो सदस्यले तपाईंलाई सम्पर्क गर्नुहुनेछ।');
+                        currentForm.reset();
+                      } else {
+                        alert(res.message || 'त्रुटि भयो।');
+                      }
+                    } catch (error) {
+                      alert('त्रुटि भयो: फेरि प्रयास गर्नुहोस्।');
+                    }
                   }}>
+                    {/* Honeypot field for anti-spam */}
+                    <div style={{ display: 'none' }}>
+                      <input name="website" tabIndex="-1" autoComplete="off" />
+                    </div>
+                    
                     <Form.Group className="mb-3">
-                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">Full Name</Form.Label>
-                      <Form.Control name="name" required className="bg-slate-50 border-0 py-3 rounded-3" />
+                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">पूरा नाम</Form.Label>
+                      <Form.Control name="name" required className="bg-slate-50 form-input-samaj py-3 rounded-3" />
                     </Form.Group>
                     <Form.Group className="mb-3">
-                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">Email Address</Form.Label>
-                      <Form.Control name="email" type="email" required className="bg-slate-50 border-0 py-3 rounded-3" />
+                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">इमेल ठेगाना</Form.Label>
+                      <Form.Control name="email" type="email" required className="bg-slate-50 form-input-samaj py-3 rounded-3" />
                     </Form.Group>
                     <Form.Group className="mb-4">
-                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">Phone Number</Form.Label>
-                      <Form.Control name="phone" required className="bg-slate-50 border-0 py-3 rounded-3" />
+                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">फोन नम्बर</Form.Label>
+                      <Form.Control name="phone" required className="bg-slate-50 form-input-samaj py-3 rounded-3" />
                     </Form.Group>
-                    <Button type="submit" className="btn-samaj w-100 py-3 fs-5">Submit Application</Button>
+                    <Button type="submit" className="btn-samaj w-100 py-3 fs-5">आवेदन बुझाउनुहोस्</Button>
                   </Form>
                 </Card>
               </Fade>
@@ -811,8 +839,8 @@ export default function App() {
         <Container>
           <Row className="g-5">
             <Col lg={4}>
-              <h3 className="font-serif mb-4">Nepal Chettri Samaj UAE</h3>
-              <p className="text-slate-400 mb-4">Fostering unity and preserving heritage for the Chettri community in the United Arab Emirates.</p>
+              <h3 className="font-serif mb-4">नेपाल क्षेत्री समाज युएई</h3>
+              <p className="text-slate-400 mb-4">संयुक्त अरब इमिरेट्समा क्षेत्री समुदायका लागि एकता बढाउँदै र सम्पदा संरक्षण गर्दै।</p>
               <div className="d-flex gap-3">
                 <a href="#" className="text-white hover:text-primary transition-colors"><Facebook /></a>
                 <a href="#" className="text-white hover:text-primary transition-colors"><Twitter /></a>
@@ -820,32 +848,32 @@ export default function App() {
               </div>
             </Col>
             <Col lg={2} md={6}>
-              <h5 className="fw-bold mb-4">Navigation</h5>
+              <h5 className="fw-bold mb-4">नेभिगेसन</h5>
               <Nav className="flex-column gap-2">
-                <Nav.Link href="#home" className="text-slate-400 p-0 hover:text-white">Home</Nav.Link>
-                <Nav.Link href="#about" className="text-slate-400 p-0 hover:text-white">About</Nav.Link>
-                <Nav.Link href="#news" className="text-slate-400 p-0 hover:text-white">News</Nav.Link>
+                <Nav.Link href="#home" className="text-slate-400 p-0 hover:text-white">गृहपृष्ठ</Nav.Link>
+                <Nav.Link href="#about" className="text-slate-400 p-0 hover:text-white">हाम्रो बारेमा</Nav.Link>
+                <Nav.Link href="#news" className="text-slate-400 p-0 hover:text-white">समाचार</Nav.Link>
               </Nav>
             </Col>
             <Col lg={3} md={6}>
-              <h5 className="fw-bold mb-4">Contact Info</h5>
+              <h5 className="fw-bold mb-4">सम्पर्क जानकारी</h5>
               <div className="d-flex flex-column gap-3 text-slate-400">
-                <div className="d-flex align-items-center gap-3"><MapPin size={18} /> Dubai, UAE</div>
-                <div className="d-flex align-items-center gap-3"><Phone size={18} /> +971 50 000 0000</div>
+                <div className="d-flex align-items-center gap-3"><MapPin size={18} /> दुबई, युएई</div>
+                <div className="d-flex align-items-center gap-3"><Phone size={18} /> +९७१ ५० ००० ००००</div>
                 <div className="d-flex align-items-center gap-3"><Mail size={18} /> info@chettrizamajuae.com</div>
               </div>
             </Col>
             <Col lg={3}>
-              <h5 className="fw-bold mb-4">Newsletter</h5>
+              <h5 className="fw-bold mb-4">न्युजलेटर</h5>
               <Form className="d-flex gap-2">
-                <Form.Control placeholder="Email" className="bg-slate-800 border-0 text-white rounded-pill px-4" />
+                <Form.Control placeholder="इमेल" className="bg-slate-800 border-0 text-white rounded-pill px-4" />
                 <Button className="btn-samaj p-2 rounded-circle"><ArrowRight size={20} /></Button>
               </Form>
             </Col>
           </Row>
           <hr className="border-slate-800 my-5" />
           <div className="text-center text-slate-500 small">
-            &copy; {new Date().getFullYear()} Nepal Chettri Samaj UAE. All Rights Reserved.
+            &copy; {new Date().getFullYear()} नेपाल क्षेत्री समाज युएई। सबै अधिकार सुरक्षित।
           </div>
         </Container>
       </footer>
@@ -865,29 +893,29 @@ export default function App() {
         <Modal.Body className="p-5">
           <div className="text-center mb-4">
             <ShieldCheck size={48} className="text-primary mb-3" />
-            <h3 className="font-serif">Admin Login</h3>
-            <p className="text-slate-500">Access the management portal</p>
+            <h3 className="font-serif">एडमिन लगइन</h3>
+            <p className="text-slate-500">व्यवस्थापन पोर्टलमा पहुँच गर्नुहोस्</p>
           </div>
           {loginError && <Alert variant="danger" className="py-2 small">{loginError}</Alert>}
           <Form onSubmit={handleLogin}>
             <Form.Group className="mb-3">
-              <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">Username</Form.Label>
+              <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">प्रयोगकर्ता नाम</Form.Label>
               <Form.Control 
                 required 
-                className="bg-slate-50 border-0 py-3 rounded-3"
+                className="bg-slate-50 form-input-samaj py-3 rounded-3"
                 onChange={e => setLoginData({...loginData, username: e.target.value})}
               />
             </Form.Group>
             <Form.Group className="mb-4">
-              <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">Password</Form.Label>
+              <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">पासवर्ड</Form.Label>
               <Form.Control 
                 type="password" 
                 required 
-                className="bg-slate-50 border-0 py-3 rounded-3"
+                className="bg-slate-50 form-input-samaj py-3 rounded-3"
                 onChange={e => setLoginData({...loginData, password: e.target.value})}
               />
             </Form.Group>
-            <Button type="submit" className="btn-samaj w-100 py-3">Login to Dashboard</Button>
+            <Button type="submit" className="btn-samaj w-100 py-3">ड्यासबोर्डमा लगइन गर्नुहोस्</Button>
           </Form>
         </Modal.Body>
       </Modal>

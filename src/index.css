@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Libre+Baskerville:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Martel:wght@400;700;900&family=Noto+Sans+Devanagari:wght@300;400;500;600;700;800;900&display=swap');
 
 :root {
-  --font-sans: "Plus Jakarta Sans", sans-serif;
-  --font-serif: "Libre Baskerville", serif;
+  --font-sans: "Noto Sans Devanagari", sans-serif;
+  --font-serif: "Martel", serif;
   --primary: rgb(201, 153, 107);
   --secondary: rgb(92, 118, 109);
   --dark: rgb(92, 79, 74);
@@ -188,6 +188,32 @@ body {
   filter: grayscale(0%);
   opacity: 1;
   transform: scale(1.1);
+}
+
+/* Partners */
+.partner-logo-large {
+  max-height: 80px;
+  max-width: 100%;
+  object-fit: contain;
+  filter: grayscale(100%);
+  opacity: 0.6;
+  transition: all 0.4s ease;
+}
+
+.partner-card {
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.partner-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+  border-color: var(--color-primary) !important;
+}
+
+.partner-card:hover .partner-logo-large {
+  filter: grayscale(0%);
+  opacity: 1;
 }
 
 .btn-samaj {
@@ -460,6 +486,22 @@ body {
 
 .btn-save:hover {
   filter: brightness(0.9);
+}
+
+.membership-form-card {
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  background-color: #ffffff;
+}
+
+.form-input-samaj {
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease;
+}
+
+.form-input-samaj:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(201, 153, 107, 0.15) !important;
+  background-color: #fff !important;
 }
 
 .gallery-grid {

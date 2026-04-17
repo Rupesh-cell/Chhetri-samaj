@@ -3,9 +3,19 @@ import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import db from './db.js';
 
 const JWT_SECRET = 'your-secret-key';
+
+// Rate Limiter for public form submissions
+const membershipLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: { message: 'Too many applications from this IP, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 async function startServer() {
   const app = express();
@@ -55,8 +65,23 @@ async function startServer() {
     res.json(partners);
   });
 
-  app.post('/api/membership', (req, res) => {
-    const { name, email, phone } = req.body;
+  app.post('/api/membership', membershipLimiter, (req, res) => {
+    const { name, email, phone, honeypot } = req.body;
+    
+    // Honeypot check (bots fill this, humans don't)
+    if (honeypot) {
+      return res.status(400).json({ message: 'Bot detected' });
+    }
+
+    // Basic Validation
+    if (!name || !email || !phone) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if (!email.includes('@')) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
     db.prepare('INSERT INTO membership (name, email, phone) VALUES (?, ?, ?)').run(name, email, phone);
     res.json({ message: 'Application submitted successfully' });
   });
