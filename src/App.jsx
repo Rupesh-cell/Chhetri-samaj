@@ -371,7 +371,7 @@ const AdminPanel = ({ token, onLogout }) => {
                             <Button 
                               variant="link" 
                               onClick={() => handleEdit(item)} 
-                              className="btn-action-edit text-slate-400 hover:text-rose-600"
+                              className="btn-action-edit text-slate-400 hover:text-primary"
                             >
                               Edit
                             </Button>
@@ -556,7 +556,7 @@ export default function App() {
               <Button 
                 variant="link" 
                 onClick={() => setShowLogin(true)} 
-                className="nav-link text-rose-600 fw-bold border-0 bg-transparent"
+                className="nav-link text-primary fw-bold border-0 bg-transparent"
               >
                 Admin
               </Button>
@@ -584,14 +584,14 @@ export default function App() {
       </section>
 
       {/* Core Values / Features Section */}
-      <section className="py-5 bg-white">
+      <section className="py-5 bg-light relative z-10">
         <Container>
-          <Row className="g-4 mt-n5 position-relative z-10">
+          <Row className="g-4">
             <Col md={4}>
               <Fade direction="up" delay={100} triggerOnce={true}>
                 <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4">
                   <Card.Body className="text-center">
-                    <div className="feature-icon mb-4 bg-rose-50 text-rose-600 rounded-circle d-inline-flex p-3">
+                    <div className="feature-icon mb-4 bg-secondary/10 text-secondary rounded-circle d-inline-flex p-3">
                       <ShieldCheck size={32} />
                     </div>
                     <h4 className="font-serif fw-bold mb-3">Preserving Culture</h4>
@@ -604,7 +604,7 @@ export default function App() {
               <Fade direction="up" delay={200} triggerOnce={true}>
                 <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4">
                   <Card.Body className="text-center">
-                    <div className="feature-icon mb-4 bg-amber-50 text-amber-600 rounded-circle d-inline-flex p-3">
+                    <div className="feature-icon mb-4 bg-primary/10 text-primary rounded-circle d-inline-flex p-3">
                       <Users size={32} />
                     </div>
                     <h4 className="font-serif fw-bold mb-3">Empowering Community</h4>
@@ -617,7 +617,7 @@ export default function App() {
               <Fade direction="up" delay={300} triggerOnce={true}>
                 <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4">
                   <Card.Body className="text-center">
-                    <div className="feature-icon mb-4 bg-emerald-50 text-emerald-600 rounded-circle d-inline-flex p-3">
+                    <div className="feature-icon mb-4 bg-dark/10 text-dark rounded-circle d-inline-flex p-3">
                       <UserPlus size={32} />
                     </div>
                     <h4 className="font-serif fw-bold mb-3">Join Our Community</h4>
@@ -632,7 +632,7 @@ export default function App() {
 
       {/* Partners Section */}
       {partners.length > 0 && (
-        <section className="py-5 bg-white border-bottom">
+        <section className="py-5 bg-light border-bottom">
           <Container>
             <Row className="align-items-center justify-content-center gap-5">
               {partners.map(partner => (
@@ -648,7 +648,7 @@ export default function App() {
       )}
 
       {/* About Section */}
-      <section id="about" className="section-padding">
+      <section id="about" className="section-padding bg-light">
         <Container>
           <Row className="align-items-center g-5">
             <Col lg={6}>
@@ -657,13 +657,13 @@ export default function App() {
                 <p className="lead mb-4 fw-medium text-slate-600">Nepal Chettri Samaj UAE is a non-profit community organization established to foster unity and brotherhood among the Chettri community residing in the UAE.</p>
                 <p className="text-slate-500 mb-5 leading-relaxed">Our history dates back to the early days of the Nepali diaspora in the UAE, where a group of visionaries came together to create a platform for cultural preservation and mutual support. Today, we stand as a strong pillar for our community.</p>
                 <div className="d-flex gap-4">
-                  <div className="text-center p-4 bg-rose-50 rounded-4 flex-fill">
-                    <h3 className="font-serif text-rose-600 mb-0">15+</h3>
-                    <small className="text-rose-400 uppercase fw-bold tracking-wider">Years</small>
+                  <div className="text-center p-4 bg-primary/10 rounded-4 flex-fill">
+                    <h3 className="font-serif text-primary mb-0">15+</h3>
+                    <small className="text-primary/70 uppercase fw-bold tracking-wider">Years</small>
                   </div>
-                  <div className="text-center p-4 bg-amber-50 rounded-4 flex-fill">
-                    <h3 className="font-serif text-amber-600 mb-0">5k+</h3>
-                    <small className="text-amber-400 uppercase fw-bold tracking-wider">Members</small>
+                  <div className="text-center p-4 bg-secondary/10 rounded-4 flex-fill">
+                    <h3 className="font-serif text-secondary mb-0">5k+</h3>
+                    <small className="text-secondary/70 uppercase fw-bold tracking-wider">Members</small>
                   </div>
                 </div>
               </Slide>
@@ -674,7 +674,7 @@ export default function App() {
                   <img src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?q=80&w=2094&auto=format&fit=crop" alt="Community" className="img-fluid rounded-5 shadow-2xl" referrerPolicy="no-referrer" />
                   <div className="position-absolute bottom-0 start-0 glass p-4 m-4 rounded-4 shadow-lg">
                     <div className="d-flex align-items-center gap-3">
-                      <div className="bg-rose-600 text-white p-2 rounded-3"><ShieldCheck size={24} /></div>
+                      <div className="bg-primary text-white p-2 rounded-3"><ShieldCheck size={24} /></div>
                       <div>
                         <h6 className="mb-0 fw-bold">Official Organization</h6>
                         <small className="text-slate-500">Registered in UAE</small>
@@ -690,7 +690,7 @@ export default function App() {
 
       {/* News Section */}
       {news.length > 0 && (
-        <section id="news" className="section-padding bg-slate-50">
+        <section id="news" className="section-padding bg-light/50">
           <Container>
             <div className="text-center mb-5">
               <h2 className="section-title">Latest <span>Updates</span></h2>
@@ -704,10 +704,10 @@ export default function App() {
                         <img src={item.image} className="w-full h-full object-cover transition-transform duration-700 hover:scale-110" alt={item.title} referrerPolicy="no-referrer" />
                       </div>
                       <Card.Body className="p-4">
-                        <div className="text-rose-500 small fw-bold mb-2 uppercase tracking-wider">{item.date}</div>
+                        <div className="text-primary small fw-bold mb-2 uppercase tracking-wider">{item.date}</div>
                         <Card.Title className="font-serif h4 mb-3">{item.title}</Card.Title>
                         <Card.Text className="text-slate-500">{item.content.replace(/<[^>]*>?/gm, '').substring(0, 100)}...</Card.Text>
-                        <Button variant="link" className="text-rose-600 p-0 fw-bold text-decoration-none d-flex align-items-center gap-2">
+                        <Button variant="link" className="text-primary p-0 fw-bold text-decoration-none d-flex align-items-center gap-2">
                           Read Story <ArrowRight size={16} />
                         </Button>
                       </Card.Body>
@@ -722,7 +722,7 @@ export default function App() {
 
       {/* Gallery Section */}
       {gallery.length > 0 && (
-        <section id="gallery" className="section-padding">
+        <section id="gallery" className="section-padding bg-light">
           <Container>
             <div className="text-center mb-5">
               <h2 className="section-title">Our <span>Moments</span></h2>
@@ -744,7 +744,7 @@ export default function App() {
       )}
 
       {/* Membership Section */}
-      <section id="membership" className="section-padding bg-rose-600 text-white">
+      <section id="membership" className="section-padding bg-primary text-white">
         <Container>
           <Row className="align-items-center g-5">
             <Col lg={6}>
@@ -807,16 +807,16 @@ export default function App() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-white py-5">
+      <footer className="bg-dark text-white py-5">
         <Container>
           <Row className="g-5">
             <Col lg={4}>
               <h3 className="font-serif mb-4">Nepal Chettri Samaj UAE</h3>
               <p className="text-slate-400 mb-4">Fostering unity and preserving heritage for the Chettri community in the United Arab Emirates.</p>
               <div className="d-flex gap-3">
-                <a href="#" className="text-white hover:text-rose-500 transition-colors"><Facebook /></a>
-                <a href="#" className="text-white hover:text-rose-500 transition-colors"><Twitter /></a>
-                <a href="#" className="text-white hover:text-rose-500 transition-colors"><Instagram /></a>
+                <a href="#" className="text-white hover:text-primary transition-colors"><Facebook /></a>
+                <a href="#" className="text-white hover:text-primary transition-colors"><Twitter /></a>
+                <a href="#" className="text-white hover:text-primary transition-colors"><Instagram /></a>
               </div>
             </Col>
             <Col lg={2} md={6}>
@@ -864,7 +864,7 @@ export default function App() {
       <Modal show={showLogin} onHide={() => setShowLogin(false)} centered>
         <Modal.Body className="p-5">
           <div className="text-center mb-4">
-            <ShieldCheck size={48} className="text-rose-600 mb-3" />
+            <ShieldCheck size={48} className="text-primary mb-3" />
             <h3 className="font-serif">Admin Login</h3>
             <p className="text-slate-500">Access the management portal</p>
           </div>

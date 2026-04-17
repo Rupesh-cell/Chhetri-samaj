@@ -5,10 +5,10 @@
 :root {
   --font-sans: "Plus Jakarta Sans", sans-serif;
   --font-serif: "Libre Baskerville", serif;
-  --primary: #e11d48;
-  --secondary: #fbbf24;
-  --dark: #0f172a;
-  --light: #f8fafc;
+  --primary: rgb(201, 153, 107);
+  --secondary: rgb(92, 118, 109);
+  --dark: rgb(92, 79, 74);
+  --light: rgb(237, 233, 230);
 }
 
 @theme {
@@ -43,7 +43,7 @@ body {
 }
 
 .hero-section {
-  background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.7)), url('https://images.unsplash.com/photo-1544735032-6a51bd74a4a3?q=80&w=2068&auto=format&fit=crop') center/cover no-repeat;
+  background: linear-gradient(rgba(92, 79, 74, 0.75), rgba(92, 79, 74, 0.75)), url('https://images.unsplash.com/photo-1544735032-6a51bd74a4a3?q=80&w=2068&auto=format&fit=crop') center/cover no-repeat;
   min-height: 90vh;
   display: flex;
   align-items: center;
@@ -156,6 +156,7 @@ body {
   font-weight: 700;
   margin-bottom: 4rem;
   letter-spacing: -0.01em;
+  color: var(--color-dark);
 }
 
 .section-title span {
@@ -196,14 +197,14 @@ body {
   padding: 12px 32px;
   font-weight: 600;
   border-radius: 100px;
-  box-shadow: 0 10px 20px rgba(225, 29, 72, 0.2);
+  box-shadow: 0 10px 20px rgba(201, 153, 107, 0.3);
   transition: all 0.3s ease;
 }
 
 .btn-samaj:hover {
-  background: #c0163e;
+  filter: brightness(0.9);
   transform: translateY(-2px);
-  box-shadow: 0 15px 30px rgba(225, 29, 72, 0.3);
+  box-shadow: 0 15px 30px rgba(201, 153, 107, 0.4);
   color: #fff;
 }
 
@@ -235,7 +236,7 @@ body {
 }
 
 .logo-icon {
-  background-color: #e11d48;
+  background-color: var(--color-primary);
   color: white;
   padding: 0.5rem;
   border-radius: 12px;
@@ -275,9 +276,9 @@ body {
 }
 
 .sidebar-nav .nav-item.active {
-  background-color: #e11d48;
+  background-color: var(--color-primary);
   color: #ffffff;
-  box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.3);
+  box-shadow: 0 10px 15px -3px rgba(201, 153, 107, 0.3);
 }
 
 .sidebar-nav .nav-item.logout {
@@ -449,7 +450,7 @@ body {
 }
 
 .btn-save {
-  background-color: #e11d48;
+  background-color: var(--color-primary);
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -458,7 +459,7 @@ body {
 }
 
 .btn-save:hover {
-  background-color: #be123c;
+  filter: brightness(0.9);
 }
 
 .gallery-grid {
@@ -523,6 +524,8 @@ body {
 
 .feature-card {
   transition: all 0.3s ease;
+  background-color: #fff;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
 .feature-card:hover {
