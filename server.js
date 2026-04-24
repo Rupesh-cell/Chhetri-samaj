@@ -1,18 +1,31 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import cors from 'cors';
+import helmet from 'helmet';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
+import 'express-async-errors';
+import { z } from 'zod';
 import db from './db.js';
+import path from 'path';
 
-const JWT_SECRET = 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-123';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 // Rate Limiter for public form submissions
 const membershipLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 requests per windowMs
   message: { message: 'Too many applications from this IP, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 10, 
+  message: { message: 'Too many login attempts, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -26,7 +39,38 @@ async function startServer() {
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
-  app.use(cors());
+  
+  // Security Headers
+  app.use(helmet({
+    contentSecurityPolicy: false, // Disable CSP for Vite dev mode
+  }));
+
+  // CORS configuration
+  const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+      ? [/https?:\/\/.*\.run\.app/, /https?:\/\/ais-.*\.run\.app/] 
+      : true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
+  app.use(cors(corsOptions));
+
+  // Validation Middleware Helper
+  const validate = (schema) => (req, res, next) => {
+    try {
+      schema.parse({
+        body: req.body,
+        query: req.query,
+        params: req.params,
+      });
+      next();
+    } catch (error) {
+      return res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: error.errors 
+      });
+    }
+  };
 
   // Auth Middleware
   const authenticateToken = (req, res, next) => {
@@ -41,12 +85,65 @@ async function startServer() {
     });
   };
 
+  // Validation Schemas
+  const loginSchema = z.object({
+    body: z.object({
+      username: z.string().min(1),
+      password: z.string().min(1),
+    }),
+  });
+
+  const membershipSchema = z.object({
+    body: z.object({
+      name: z.string().min(3).max(100),
+      email: z.string().email().max(100),
+      phone: z.string().regex(/^\+?[0-9\s]{7,20}$/),
+      gender: z.enum(['Male', 'Female', 'Other']),
+      dob: z.string().min(1),
+      blood_group: z.string().max(10).optional().nullable(),
+      address_uae: z.string().min(5).max(500),
+      address_nepal: z.string().min(5).max(500),
+      occupation: z.string().max(200).optional().nullable(),
+      company: z.string().max(200).optional().nullable(),
+      honeypot: z.any().optional(),
+      status: z.string().optional(),
+    }),
+  });
+
+  const newsSchema = z.object({
+    body: z.object({
+      title: z.string().min(5).max(200),
+      date: z.string().min(1),
+      content: z.string().min(10),
+      image: z.string().url().or(z.string().startsWith('data:image/')),
+    }),
+  });
+
+  const gallerySchema = z.object({
+    body: z.object({
+      title: z.string().min(3).max(100),
+      image: z.string().url().or(z.string().startsWith('data:image/')),
+    }),
+  });
+
+  const partnerSchema = z.object({
+    body: z.object({
+      name: z.string().min(2).max(100),
+      logo: z.string().url().or(z.string().startsWith('data:image/')),
+    }),
+  });
+
   // Auth Routes
-  app.post('/api/auth/login', (req, res) => {
+  app.post('/api/auth/login', loginLimiter, validate(loginSchema), async (req, res) => {
     const { username, password } = req.body;
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
-    if (user && bcrypt.compareSync(password, user.password)) {
-      const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET);
+    
+    if (user && await bcrypt.compare(password, user.password)) {
+      const token = jwt.sign(
+        { id: user.id, username: user.username }, 
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
       res.json({ token });
     } else {
       res.status(401).json({ message: 'Invalid credentials' });
@@ -69,7 +166,7 @@ async function startServer() {
     res.json(partners);
   });
 
-  app.post('/api/membership', membershipLimiter, (req, res) => {
+  app.post('/api/membership', membershipLimiter, validate(membershipSchema), (req, res) => {
     const { 
       name, email, phone, gender, dob, blood_group, 
       address_uae, address_nepal, occupation, company, honeypot 
@@ -78,36 +175,6 @@ async function startServer() {
     // Honeypot check
     if (honeypot) {
       return res.status(400).json({ message: 'अनुचित गतिविधि पत्ता लाग्यो।' });
-    }
-
-    // Comprehensive Server-side Validation
-    const errors = [];
-
-    // Name validation
-    if (!name || name.trim().length < 3) errors.push('पूरा नाम कम्तिमा ३ अक्षरको हुनुपर्छ।');
-    if (name && name.length > 100) errors.push('नाम धेरै लामो भयो।');
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) errors.push('कृपया वैध इमेल ठेगाना राख्नुहोस्।');
-    if (email && email.length > 100) errors.push('इमेल धेरै लामो भयो।');
-
-    // Phone validation
-    const phoneRegex = /^\+?[0-9]{7,15}$/;
-    if (!phone || !phoneRegex.test(phone.replace(/\s/g, ''))) errors.push('कृपया वैध फोन नम्बर राख्नुहोस्।');
-
-    // Address validation
-    if (!address_uae || address_uae.trim().length < 5) errors.push('युएईको ठेगाना स्पष्ट खुलाउनुहोस्।');
-    if (!address_nepal || address_nepal.trim().length < 5) errors.push('नेपालको ठेगाना स्पष्ट खुलाउनुहोस्।');
-
-    // Required single-choice validation
-    const validGenders = ['Male', 'Female', 'Other'];
-    if (!gender || !validGenders.includes(gender)) errors.push('कृपया लिङ्ग छान्नुहोस्।');
-
-    if (!dob) errors.push('जन्म मिति अनिवार्य छ।');
-
-    if (errors.length > 0) {
-      return res.status(400).json({ message: errors[0], allErrors: errors });
     }
 
     try {
@@ -161,7 +228,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/admin/membership/:id', authenticateToken, (req, res) => {
+  app.put('/api/admin/membership/:id', authenticateToken, validate(membershipSchema), (req, res) => {
     const { name, email, phone, gender, dob, blood_group, address_uae, address_nepal, occupation, company, status } = req.body;
     db.prepare(`
       UPDATE membership 
@@ -172,13 +239,13 @@ async function startServer() {
     res.json({ message: 'Membership updated successfully' });
   });
 
-  app.post('/api/admin/news', authenticateToken, (req, res) => {
+  app.post('/api/admin/news', authenticateToken, validate(newsSchema), (req, res) => {
     const { title, date, content, image } = req.body;
     db.prepare('INSERT INTO news (title, date, content, image) VALUES (?, ?, ?, ?)').run(title, date, content, image);
     res.json({ message: 'News added successfully' });
   });
 
-  app.put('/api/admin/news/:id', authenticateToken, (req, res) => {
+  app.put('/api/admin/news/:id', authenticateToken, validate(newsSchema), (req, res) => {
     const { title, date, content, image } = req.body;
     db.prepare('UPDATE news SET title = ?, date = ?, content = ?, image = ? WHERE id = ?').run(title, date, content, image, req.params.id);
     res.json({ message: 'News updated successfully' });
@@ -194,13 +261,13 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/gallery', authenticateToken, (req, res) => {
+  app.post('/api/admin/gallery', authenticateToken, validate(gallerySchema), (req, res) => {
     const { title, image } = req.body;
     db.prepare('INSERT INTO gallery (title, image) VALUES (?, ?)').run(title, image);
     res.json({ message: 'Gallery image added successfully' });
   });
 
-  app.put('/api/admin/gallery/:id', authenticateToken, (req, res) => {
+  app.put('/api/admin/gallery/:id', authenticateToken, validate(gallerySchema), (req, res) => {
     const { title, image } = req.body;
     db.prepare('UPDATE gallery SET title = ?, image = ? WHERE id = ?').run(title, image, req.params.id);
     res.json({ message: 'Gallery updated successfully' });
@@ -216,13 +283,13 @@ async function startServer() {
     }
   });
 
-  app.post('/api/admin/partners', authenticateToken, (req, res) => {
+  app.post('/api/admin/partners', authenticateToken, validate(partnerSchema), (req, res) => {
     const { name, logo } = req.body;
     db.prepare('INSERT INTO partners (name, logo) VALUES (?, ?)').run(name, logo);
     res.json({ message: 'Partner added successfully' });
   });
 
-  app.put('/api/admin/partners/:id', authenticateToken, (req, res) => {
+  app.put('/api/admin/partners/:id', authenticateToken, validate(partnerSchema), (req, res) => {
     const { name, logo } = req.body;
     db.prepare('UPDATE partners SET name = ?, logo = ? WHERE id = ?').run(name, logo, req.params.id);
     res.json({ message: 'Partner updated successfully' });
@@ -251,6 +318,17 @@ async function startServer() {
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
+  });
+
+  // Global Error Handler
+  app.use((err, req, res, next) => {
+    console.error(err.stack);
+    const status = err.status || 500;
+    const message = process.env.NODE_ENV === 'production' 
+      ? 'An unexpected error occurred' 
+      : err.message;
+    
+    res.status(status).json({ message });
   });
 }
 

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Container, Row, Col, Button, Badge, Card } from 'react-bootstrap';
 import { ArrowLeft, Calendar, User, Share2 } from 'lucide-react';
 import { Fade } from 'react-awesome-reveal';
+import DOMPurify from 'dompurify';
 
 const API = {
   getNews: async () => {
@@ -108,7 +109,7 @@ const NewsDetail = () => {
                     .markdown-body img { border-radius: 1rem; margin: 2rem 0; box-shadow: 0 20px 50px -20px rgba(0,0,0,0.1); }
                   `}
                 </style>
-                <div dangerouslySetInnerHTML={{ __html: post.content }} className="markdown-body" />
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }} className="markdown-body" />
               </div>
               
               <div className="mt-20 p-10 bg-slate-50 rounded-5 d-flex flex-column flex-md-row align-items-center justify-content-between gap-5 border border-slate-100">
