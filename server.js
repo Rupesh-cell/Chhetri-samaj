@@ -21,6 +21,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Trust proxy for rate limiting (needed in AI Studio environment)
+  app.set('trust proxy', 1);
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   app.use(cors());
@@ -67,24 +70,68 @@ async function startServer() {
   });
 
   app.post('/api/membership', membershipLimiter, (req, res) => {
-    const { name, email, phone, honeypot } = req.body;
+    const { 
+      name, email, phone, gender, dob, blood_group, 
+      address_uae, address_nepal, occupation, company, honeypot 
+    } = req.body;
     
-    // Honeypot check (bots fill this, humans don't)
+    // Honeypot check
     if (honeypot) {
-      return res.status(400).json({ message: 'Bot detected' });
+      return res.status(400).json({ message: 'अनुचित गतिविधि पत्ता लाग्यो।' });
     }
 
-    // Basic Validation
-    if (!name || !email || !phone) {
-      return res.status(400).json({ message: 'All fields are required' });
+    // Comprehensive Server-side Validation
+    const errors = [];
+
+    // Name validation
+    if (!name || name.trim().length < 3) errors.push('पूरा नाम कम्तिमा ३ अक्षरको हुनुपर्छ।');
+    if (name && name.length > 100) errors.push('नाम धेरै लामो भयो।');
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) errors.push('कृपया वैध इमेल ठेगाना राख्नुहोस्।');
+    if (email && email.length > 100) errors.push('इमेल धेरै लामो भयो।');
+
+    // Phone validation
+    const phoneRegex = /^\+?[0-9]{7,15}$/;
+    if (!phone || !phoneRegex.test(phone.replace(/\s/g, ''))) errors.push('कृपया वैध फोन नम्बर राख्नुहोस्।');
+
+    // Address validation
+    if (!address_uae || address_uae.trim().length < 5) errors.push('युएईको ठेगाना स्पष्ट खुलाउनुहोस्।');
+    if (!address_nepal || address_nepal.trim().length < 5) errors.push('नेपालको ठेगाना स्पष्ट खुलाउनुहोस्।');
+
+    // Required single-choice validation
+    const validGenders = ['Male', 'Female', 'Other'];
+    if (!gender || !validGenders.includes(gender)) errors.push('कृपया लिङ्ग छान्नुहोस्।');
+
+    if (!dob) errors.push('जन्म मिति अनिवार्य छ।');
+
+    if (errors.length > 0) {
+      return res.status(400).json({ message: errors[0], allErrors: errors });
     }
 
-    if (!email.includes('@')) {
-      return res.status(400).json({ message: 'Invalid email format' });
+    try {
+      db.prepare(`
+        INSERT INTO membership (name, email, phone, gender, dob, blood_group, address_uae, address_nepal, occupation, company) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        name.trim(), 
+        email.trim().toLowerCase(), 
+        phone.trim(), 
+        gender, 
+        dob, 
+        blood_group || '', 
+        address_uae.trim(), 
+        address_nepal.trim(), 
+        (occupation || '').trim(), 
+        (company || '').trim()
+      );
+      
+      res.json({ message: 'Application submitted successfully' });
+    } catch (err) {
+      console.error('Database error:', err);
+      res.status(500).json({ message: 'डाटाबेस त्रुटि। कृपया पछि प्रयास गर्नुहोस्।' });
     }
-
-    db.prepare('INSERT INTO membership (name, email, phone) VALUES (?, ?, ?)').run(name, email, phone);
-    res.json({ message: 'Application submitted successfully' });
   });
 
   // Admin CRUD Routes

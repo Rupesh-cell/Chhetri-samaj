@@ -4,6 +4,7 @@ import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import NewsList from './pages/NewsList';
 import NewsDetail from './pages/NewsDetail';
+import MembershipPage from './pages/MembershipPage';
 import { 
   Container, 
   Row, 
@@ -301,7 +302,8 @@ const AdminPanel = ({ token, onLogout }) => {
                   {activeTab === 'membership' && (
                     <>
                       <th>आवेदकको विवरण</th>
-                      <th>सम्पर्क</th>
+                      <th>सम्पर्क विवरण</th>
+                      <th>पेशा र ठेगाना</th>
                       <th>अवस्था</th>
                     </>
                   )}
@@ -338,9 +340,20 @@ const AdminPanel = ({ token, onLogout }) => {
                         <>
                           <td>
                             <div className="fw-bold">{item.name}</div>
-                            <div className="small text-slate-400">{item.email}</div>
+                            <div className="small text-primary">{item.email}</div>
+                            <div className="x-small text-slate-400">
+                              {item.gender} | {item.dob} | {item.blood_group}
+                            </div>
                           </td>
-                          <td>{item.phone}</td>
+                          <td>
+                            <div className="fw-bold">{item.phone}</div>
+                            <div className="small text-slate-400">UAE: {item.address_uae}</div>
+                          </td>
+                          <td>
+                            <div className="small fw-bold">{item.occupation}</div>
+                            <div className="x-small text-slate-400">{item.company}</div>
+                            <div className="x-small text-slate-400">Nepal: {item.address_nepal}</div>
+                          </td>
                           <td>
                             <span className={`status-badge ${item.status}`}>
                               {item.status === 'pending' ? 'पेन्डिङ' : 'अनुमोदित'}
@@ -668,7 +681,10 @@ export default function App() {
                   {news.length > 0 && <Nav.Link href="#news">समाचार</Nav.Link>}
                   {gallery.length > 0 && <Nav.Link href="#gallery">ग्यालरी</Nav.Link>}
                   {partners.length > 0 && <Nav.Link href="#partners">साझेदारहरू</Nav.Link>}
-                  <Nav.Link href="#membership">आबद्ध हुनुहोस्</Nav.Link>
+                  <Nav.Link onClick={() => {
+                    navigate('/membership');
+                    setIsMenuOpen(false);
+                  }}>आबद्ध हुनुहोस्</Nav.Link>
                   <Button 
                     variant="link" 
                     onClick={() => setShowLogin(true)} 
@@ -756,14 +772,14 @@ export default function App() {
             </div>
             <Row className="g-4">
               {partners.map(partner => (
-                <Col md={3} sm={6} xs={12} key={partner.id} className="mb-3 d-flex align-items-stretch">
+                <Col md={3} sm={6} xs={6} key={partner.id} className="mb-3 d-flex align-items-stretch">
                   <Zoom triggerOnce={true} className="w-100 d-flex">
-                    <Card className="partner-card h-100 border-0 shadow-sm p-4 text-center flex-fill">
-                      <div className="d-flex align-items-center justify-content-center h-100" style={{ minHeight: '140px' }}>
-                        <img src={partner.logo} alt={partner.name} className="partner-logo-large" referrerPolicy="no-referrer" />
+                    <Card className="partner-card h-100 border-0 shadow-sm p-2 p-md-4 text-center flex-fill">
+                      <div className="d-flex align-items-center justify-content-center h-100" style={{ minHeight: '80px', maxHeight: '140px' }}>
+                        <img src={partner.logo} alt={partner.name} className="partner-logo-large" style={{ maxWidth: '100%', height: 'auto', maxHeight: '60px' }} referrerPolicy="no-referrer" />
                       </div>
-                      <div className="mt-4">
-                        <h6 className="mb-0 fw-bold">{partner.name}</h6>
+                      <div className="mt-2 mt-md-4">
+                        <h6 className="mb-0 fw-bold small">{partner.name}</h6>
                       </div>
                     </Card>
                   </Zoom>
@@ -916,9 +932,9 @@ export default function App() {
                 </Col>
               )}
 
-              {/* Grid for Remaining Posts (4th onwards) */}
+              {/* Grid for Remaining Posts (4th onwards) - Hidden on mobile to keep page concise */}
               {news.length > 3 && news.slice(3, 7).map((item, idx) => (
-                <Col md={6} lg={4} xl={3} key={item.id}>
+                <Col md={6} lg={4} xl={3} key={item.id} className="d-none d-md-block">
                   <Fade direction="up" delay={idx * 100} triggerOnce={true}>
                     <Card 
                       className="card-blog border-0 overflow-hidden shadow-sm h-100 group cursor-pointer bg-white" 
@@ -978,17 +994,22 @@ export default function App() {
               <h2 className="section-title">हाम्रा <span>क्षणहरू</span></h2>
             </div>
             <div className="gallery-grid">
-              {gallery.map((item, idx) => (
-                <Zoom key={item.id} delay={idx * 50} triggerOnce={true}>
+              {gallery.slice(0, 8).map((item, idx) => (
+                <Zoom key={item.id} delay={idx * 50} triggerOnce={true} className={idx >= 4 ? "d-none d-md-block" : ""}>
                   <div className="gallery-item">
                     <img src={item.image} alt={item.title} referrerPolicy="no-referrer" />
                     <div className="overlay">
-                      <h5 className="mb-0 font-serif">{item.title}</h5>
+                      <h5 className="mb-0 font-serif small">{item.title}</h5>
                     </div>
                   </div>
                 </Zoom>
               ))}
             </div>
+            {gallery.length > 4 && (
+              <div className="text-center mt-5">
+                <Button variant="outline-primary" className="rounded-pill px-5">अरु तस्बिरहरू हेर्नुहोस्</Button>
+              </div>
+            )}
           </Container>
         </section>
       )}
@@ -1021,50 +1042,21 @@ export default function App() {
             </Col>
             <Col lg={6}>
               <Fade direction="right" triggerOnce={true}>
-                <Card className="membership-form-card rounded-5 p-5 text-dark shadow-2xl">
-                  <h3 className="font-serif mb-4">दर्ता फारम</h3>
-                  <Form onSubmit={async (e) => {
-                    const currentForm = e.currentTarget;
-                    e.preventDefault();
-                    const formData = new FormData(currentForm);
-                    const data = {
-                      name: formData.get('name'),
-                      email: formData.get('email'),
-                      phone: formData.get('phone'),
-                      honeypot: formData.get('website')
-                    };
-                    
-                    try {
-                      const res = await API.submitMembership(data);
-                      if (res.message && (res.message.includes('successfully') || res.message.includes('सफलतापूर्वक'))) {
-                        alert('आवेदन सफलतापूर्वक बुझाइयो! यसपछिको प्रक्रियाको लागि हाम्रो सदस्यले तपाईंलाई सम्पर्क गर्नुहुनेछ।');
-                        currentForm.reset();
-                      } else {
-                        alert(res.message || 'त्रुटि भयो।');
-                      }
-                    } catch (error) {
-                      alert('त्रुटि भयो: फेरि प्रयास गर्नुहोस्।');
-                    }
-                  }}>
-                    {/* Honeypot field for anti-spam */}
-                    <div style={{ display: 'none' }}>
-                      <input name="website" tabIndex="-1" autoComplete="off" />
-                    </div>
-                    
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">पूरा नाम</Form.Label>
-                      <Form.Control name="name" required className="bg-slate-50 form-input-samaj py-3 rounded-3" />
-                    </Form.Group>
-                    <Form.Group className="mb-3">
-                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">इमेल ठेगाना</Form.Label>
-                      <Form.Control name="email" type="email" required className="bg-slate-50 form-input-samaj py-3 rounded-3" />
-                    </Form.Group>
-                    <Form.Group className="mb-4">
-                      <Form.Label className="fw-bold small uppercase tracking-wider text-slate-400">फोन नम्बर</Form.Label>
-                      <Form.Control name="phone" required className="bg-slate-50 form-input-samaj py-3 rounded-3" />
-                    </Form.Group>
-                    <Button type="submit" className="btn-samaj w-100 py-3 fs-5">आवेदन बुझाउनुहोस्</Button>
-                  </Form>
+                <Card className="membership-form-card rounded-5 p-5 text-dark shadow-2xl h-100 d-flex flex-column justify-content-center text-center">
+                  <UserPlus size={64} className="text-primary mx-auto mb-4" />
+                  <h3 className="font-serif fw-bold mb-3">हाम्रो समाजमा आबद्ध हुनुहोस्</h3>
+                  <p className="text-slate-600 mb-5 fs-5">
+                    नेपाल क्षेत्री समाज युएईको सदस्य बनेर हाम्रो अभियानमा साथ दिनुहोस् र विभिन्न सामुदायिक फाइदाहरू प्राप्त गर्नुहोस्।
+                  </p>
+                  <div>
+                    <Button 
+                      variant="primary" 
+                      onClick={() => navigate('/membership')} 
+                      className="rounded-pill px-5 py-3 fw-bold fs-5 shadow-lg d-inline-flex align-items-center justify-content-center gap-2"
+                    >
+                      अहिले नै फारम भर्नुहोस् <ArrowRight size={20} />
+                    </Button>
+                  </div>
                 </Card>
               </Fade>
             </Col>
@@ -1091,6 +1083,7 @@ export default function App() {
                 <Nav.Link href="#home" className="p-0">गृहपृष्ठ</Nav.Link>
                 <Nav.Link href="#about" className="p-0">हाम्रो बारेमा</Nav.Link>
                 <Nav.Link href="#news" className="p-0">समाचार</Nav.Link>
+                <Nav.Link onClick={() => navigate('/membership')} className="p-0 pointer">आबद्ध हुनुहोस्</Nav.Link>
               </Nav>
             </Col>
             <Col lg={3} md={6}>
@@ -1160,6 +1153,7 @@ export default function App() {
     </div>} />
       <Route path="/news" element={<NewsList />} />
       <Route path="/news/:id" element={<NewsDetail />} />
+      <Route path="/membership" element={<MembershipPage />} />
     </Routes>
   );
 }

@@ -30,6 +30,13 @@ db.exec(`
     name TEXT,
     email TEXT,
     phone TEXT,
+    gender TEXT,
+    dob TEXT,
+    blood_group TEXT,
+    address_uae TEXT,
+    address_nepal TEXT,
+    occupation TEXT,
+    company TEXT,
     status TEXT DEFAULT 'pending'
   );
 
@@ -39,6 +46,14 @@ db.exec(`
     logo TEXT
   );
 `);
+
+// Add columns if they don't exist (for existing databases)
+const columns = db.prepare("PRAGMA table_info(membership)").all().map(c => c.name);
+['gender', 'dob', 'blood_group', 'address_uae', 'address_nepal', 'occupation', 'company'].forEach(col => {
+  if (!columns.includes(col)) {
+    db.prepare(`ALTER TABLE membership ADD COLUMN ${col} TEXT`).run();
+  }
+});
 
 // Create default admin if not exists
 const adminExists = db.prepare('SELECT * FROM users WHERE username = ?').get('admin');
