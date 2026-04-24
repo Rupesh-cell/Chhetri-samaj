@@ -141,13 +141,35 @@ async function startServer() {
   });
 
   app.delete('/api/admin/membership/:id', authenticateToken, (req, res) => {
-    db.prepare('DELETE FROM membership WHERE id = ?').run(req.params.id);
-    res.json({ message: 'Deleted successfully' });
+    try {
+      const { id } = req.params;
+      db.prepare('DELETE FROM membership WHERE id = ?').run(id);
+      res.json({ message: 'Deleted successfully' });
+    } catch (err) {
+      console.error('Delete membership error:', err);
+      res.status(500).json({ message: 'Error deleting membership' });
+    }
   });
 
   app.post('/api/admin/membership/:id/approve', authenticateToken, (req, res) => {
-    db.prepare("UPDATE membership SET status = 'approved' WHERE id = ?").run(req.params.id);
-    res.json({ message: 'Membership approved successfully' });
+    try {
+      db.prepare("UPDATE membership SET status = 'approved' WHERE id = ?").run(req.params.id);
+      res.json({ message: 'Membership approved successfully' });
+    } catch (err) {
+      console.error('Approve membership error:', err);
+      res.status(500).json({ message: 'Error approving membership' });
+    }
+  });
+
+  app.put('/api/admin/membership/:id', authenticateToken, (req, res) => {
+    const { name, email, phone, gender, dob, blood_group, address_uae, address_nepal, occupation, company, status } = req.body;
+    db.prepare(`
+      UPDATE membership 
+      SET name = ?, email = ?, phone = ?, gender = ?, dob = ?, blood_group = ?, 
+          address_uae = ?, address_nepal = ?, occupation = ?, company = ?, status = ?
+      WHERE id = ?
+    `).run(name, email, phone, gender, dob, blood_group, address_uae, address_nepal, occupation, company, status, req.params.id);
+    res.json({ message: 'Membership updated successfully' });
   });
 
   app.post('/api/admin/news', authenticateToken, (req, res) => {
@@ -163,8 +185,13 @@ async function startServer() {
   });
 
   app.delete('/api/admin/news/:id', authenticateToken, (req, res) => {
-    db.prepare('DELETE FROM news WHERE id = ?').run(req.params.id);
-    res.json({ message: 'Deleted successfully' });
+    try {
+      db.prepare('DELETE FROM news WHERE id = ?').run(req.params.id);
+      res.json({ message: 'Deleted successfully' });
+    } catch (err) {
+      console.error('Delete news error:', err);
+      res.status(500).json({ message: 'Error deleting news' });
+    }
   });
 
   app.post('/api/admin/gallery', authenticateToken, (req, res) => {
@@ -180,8 +207,13 @@ async function startServer() {
   });
 
   app.delete('/api/admin/gallery/:id', authenticateToken, (req, res) => {
-    db.prepare('DELETE FROM gallery WHERE id = ?').run(req.params.id);
-    res.json({ message: 'Deleted successfully' });
+    try {
+      db.prepare('DELETE FROM gallery WHERE id = ?').run(req.params.id);
+      res.json({ message: 'Deleted successfully' });
+    } catch (err) {
+      console.error('Delete gallery error:', err);
+      res.status(500).json({ message: 'Error deleting gallery' });
+    }
   });
 
   app.post('/api/admin/partners', authenticateToken, (req, res) => {
@@ -197,8 +229,13 @@ async function startServer() {
   });
 
   app.delete('/api/admin/partners/:id', authenticateToken, (req, res) => {
-    db.prepare('DELETE FROM partners WHERE id = ?').run(req.params.id);
-    res.json({ message: 'Deleted successfully' });
+    try {
+      db.prepare('DELETE FROM partners WHERE id = ?').run(req.params.id);
+      res.json({ message: 'Deleted successfully' });
+    } catch (err) {
+      console.error('Delete partner error:', err);
+      res.status(500).json({ message: 'Error deleting partner' });
+    }
   });
 
   // Vite middleware for development

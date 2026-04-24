@@ -37,7 +37,8 @@ db.exec(`
     address_nepal TEXT,
     occupation TEXT,
     company TEXT,
-    status TEXT DEFAULT 'pending'
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS partners (
@@ -49,9 +50,13 @@ db.exec(`
 
 // Add columns if they don't exist (for existing databases)
 const columns = db.prepare("PRAGMA table_info(membership)").all().map(c => c.name);
-['gender', 'dob', 'blood_group', 'address_uae', 'address_nepal', 'occupation', 'company'].forEach(col => {
+['gender', 'dob', 'blood_group', 'address_uae', 'address_nepal', 'occupation', 'company', 'created_at'].forEach(col => {
   if (!columns.includes(col)) {
-    db.prepare(`ALTER TABLE membership ADD COLUMN ${col} TEXT`).run();
+    if (col === 'created_at') {
+      db.prepare(`ALTER TABLE membership ADD COLUMN ${col} DATETIME DEFAULT CURRENT_TIMESTAMP`).run();
+    } else {
+      db.prepare(`ALTER TABLE membership ADD COLUMN ${col} TEXT`).run();
+    }
   }
 });
 

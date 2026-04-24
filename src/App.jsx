@@ -17,7 +17,9 @@ import {
   Table,
   Modal,
   Alert,
-  Badge
+  Badge,
+  Dropdown,
+  ButtonGroup
 } from 'react-bootstrap';
 import { 
   Calendar, 
@@ -36,8 +38,14 @@ import {
   LogOut,
   Plus,
   Trash2,
-  ShieldCheck
+  ShieldCheck,
+  Eye,
+  Edit,
+  Printer,
+  Download
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Fade, Slide, Zoom } from "react-awesome-reveal";
 
 // --- API Service ---
@@ -64,6 +72,17 @@ const API = {
     deleteMembership: (id, token) => fetch(`/api/admin/membership/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
+    }).then(res => {
+      if (!res.ok) throw new Error('Delete failed');
+      return res.json();
+    }),
+    updateMembership: (id, data, token) => fetch(`/api/admin/membership/${id}`, {
+      method: 'PUT',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` 
+      },
+      body: JSON.stringify(data)
     }),
     approveMembership: (id, token) => fetch(`/api/admin/membership/${id}/approve`, {
       method: 'POST',
@@ -88,6 +107,9 @@ const API = {
     deleteNews: (id, token) => fetch(`/api/admin/news/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
+    }).then(res => {
+      if (!res.ok) throw new Error('Delete failed');
+      return res.json();
     }),
     addGallery: (data, token) => fetch('/api/admin/gallery', {
       method: 'POST',
@@ -108,6 +130,9 @@ const API = {
     deleteGallery: (id, token) => fetch(`/api/admin/gallery/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
+    }).then(res => {
+      if (!res.ok) throw new Error('Delete failed');
+      return res.json();
     }),
     addPartner: (data, token) => fetch('/api/admin/partners', {
       method: 'POST',
@@ -128,6 +153,9 @@ const API = {
     deletePartner: (id, token) => fetch(`/api/admin/partners/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
+    }).then(res => {
+      if (!res.ok) throw new Error('Delete failed');
+      return res.json();
     }),
   }
 };
@@ -137,10 +165,14 @@ const API = {
 const AdminPanel = ({ token, onLogout }) => {
   const [activeTab, setActiveTab] = useState('membership');
   const [data, setData] = useState({ membership: [], news: [], gallery: [], partners: [] });
+  const [filters, setFilters] = useState({ status: 'all', searchTerm: '', period: 'all' });
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [formData, setFormData] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -170,40 +202,151 @@ const AdminPanel = ({ token, onLogout }) => {
   };
 
   const handleDelete = async (id) => {
+    if (!id) return;
     if (!window.confirm('के तपाईं पक्का यो आइटम हटाउन चाहनुहुन्छ?')) return;
-    if (activeTab === 'membership') await API.admin.deleteMembership(id, token);
-    if (activeTab === 'news') await API.admin.deleteNews(id, token);
-    if (activeTab === 'gallery') await API.admin.deleteGallery(id, token);
-    if (activeTab === 'partners') await API.admin.deletePartner(id, token);
-    loadData();
+    try {
+      let result;
+      if (activeTab === 'membership') result = await API.admin.deleteMembership(id, token);
+      else if (activeTab === 'news') result = await API.admin.deleteNews(id, token);
+      else if (activeTab === 'gallery') result = await API.admin.deleteGallery(id, token);
+      else if (activeTab === 'partners') result = await API.admin.deletePartner(id, token);
+      
+      alert('सफलतापूर्वक हटाइयो!');
+      await loadData();
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert('हटाउन असफल भयो। कृपया पछि प्रयास गर्नुहोस्।');
+    }
   };
 
   const handleApprove = async (id) => {
-    await API.admin.approveMembership(id, token);
-    loadData();
+    try {
+      await API.admin.approveMembership(id, token);
+      loadData();
+    } catch (err) {
+      console.error("Approval failed", err);
+      alert('अनुमोदन गर्न असफल भयो।');
+    }
   };
 
   const handleEdit = (item) => {
-    setFormData(item);
     setIsEditing(true);
+    setSelectedItem(item);
+    setFormData({ ...item });
     setShowModal(true);
+  };
+
+  const handleViewDetails = (item) => {
+    setSelectedItem(item);
+    setShowDetailModal(true);
+  };
+
+  const printMemberToPDF = async () => {
+    if (!selectedItem) return;
+    setPrinting(true);
+    
+    const input = document.getElementById('printable-member-card');
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Member_${selectedItem.name.replace(/\s+/g, '_')}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert('PDF सिर्जना गर्दा त्रुटि भयो।');
+    }
+    setPrinting(false);
+  };
+
+  const printAllMembersToPDF = async () => {
+    const members = data.membership;
+    if (!members || members.length === 0) return;
+    setPrinting(true);
+    
+    const input = document.getElementById('printable-members-list');
+    try {
+      const canvas = await html2canvas(input, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Membership_List_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('Error generating full list PDF:', err);
+      alert('PDF सिर्जना गर्दा त्रुटि भयो।');
+    }
+    setPrinting(false);
+  };
+
+  const exportMembersToCSV = () => {
+    const members = data.membership;
+    if (!members || members.length === 0) return;
+
+    const headers = ['Name', 'Email', 'Phone', 'Gender', 'DOB', 'Blood Group', 'Occupation', 'Company', 'Address UAE', 'Address Nepal', 'Status'];
+    const csvRows = [
+      headers.join(','),
+      ...members.map(m => [
+        `"${m.name}"`,
+        `"${m.email}"`,
+        `"${m.phone}"`,
+        `"${m.gender}"`,
+        `"${m.dob}"`,
+        `"${m.blood_group}"`,
+        `"${m.occupation}"`,
+        `"${m.company}"`,
+        `"${m.address_uae}"`,
+        `"${m.address_nepal}"`,
+        `"${m.status}"`
+      ].join(','))
+    ];
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob(["\ufeff" + csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Members_List_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      if (activeTab === 'news') await API.admin.updateNews(formData.id, formData, token);
-      if (activeTab === 'gallery') await API.admin.updateGallery(formData.id, formData, token);
-      if (activeTab === 'partners') await API.admin.updatePartner(formData.id, formData, token);
-    } else {
-      if (activeTab === 'news') await API.admin.addNews(formData, token);
-      if (activeTab === 'gallery') await API.admin.addGallery(formData, token);
-      if (activeTab === 'partners') await API.admin.addPartner(formData, token);
+    try {
+      if (isEditing) {
+        if (activeTab === 'news') await API.admin.updateNews(formData.id, formData, token);
+        else if (activeTab === 'gallery') await API.admin.updateGallery(formData.id, formData, token);
+        else if (activeTab === 'partners') await API.admin.updatePartner(formData.id, formData, token);
+        else if (activeTab === 'membership') await API.admin.updateMembership(formData.id, formData, token);
+      } else {
+        if (activeTab === 'news') await API.admin.addNews(formData, token);
+        if (activeTab === 'gallery') await API.admin.addGallery(formData, token);
+        if (activeTab === 'partners') await API.admin.addPartner(formData, token);
+      }
+      setShowModal(false);
+      setFormData({});
+      setIsEditing(false);
+      loadData();
+    } catch (err) {
+      console.error("Submit failed", err);
+      alert('बचत गर्दा त्रुटि भयो।');
     }
-    setShowModal(false);
-    setFormData({});
-    setIsEditing(false);
-    loadData();
   };
 
   const openAddModal = () => {
@@ -222,6 +365,38 @@ const AdminPanel = ({ token, onLogout }) => {
       reader.readAsDataURL(file);
     }
   };
+
+  const stats = {
+    total: data.membership.length,
+    pending: data.membership.filter(m => m.status === 'pending').length,
+    approved: data.membership.filter(m => m.status === 'approved').length
+  };
+
+  const filteredItems = data[activeTab].filter(item => {
+    if (activeTab === 'membership') {
+      const matchesStatus = filters.status === 'all' || item.status === filters.status;
+      const matchesSearch = item.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
+                            item.email.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      
+      let matchesPeriod = true;
+      if (filters.period !== 'all' && item.created_at) {
+        const itemDate = new Date(item.created_at);
+        const now = new Date();
+        if (filters.period === 'today') {
+          matchesPeriod = itemDate.toDateString() === now.toDateString();
+        } else if (filters.period === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          matchesPeriod = itemDate >= weekAgo;
+        } else if (filters.period === 'month') {
+          const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          matchesPeriod = itemDate >= monthAgo;
+        }
+      }
+      
+      return matchesStatus && matchesSearch && matchesPeriod;
+    }
+    return true;
+  });
 
   return (
     <div className="admin-layout">
@@ -284,6 +459,25 @@ const AdminPanel = ({ token, onLogout }) => {
             <p className="page-subtitle">आफ्नो सामुदायिक सामग्री व्यवस्थापन गर्नुहोस्</p>
           </div>
           <div className="header-right">
+            {activeTab === 'membership' && data.membership.length > 0 && (
+              <Dropdown as={ButtonGroup} className="btn-add me-2">
+                <Button 
+                  variant="outline-primary" 
+                  onClick={printAllMembersToPDF} 
+                  disabled={printing}
+                  className="bg-white text-primary border-primary"
+                >
+                  <Printer size={18} className="me-2" /> 
+                  {printing ? 'प्रोसेसिङ...' : 'सदस्य रिपोर्ट (PDF)'}
+                </Button>
+                <Dropdown.Toggle split variant="outline-primary" className="bg-white text-primary border-primary" />
+                <Dropdown.Menu className="shadow-sm border-0">
+                  <Dropdown.Item onClick={exportMembersToCSV} className="py-2">
+                    <Download size={16} className="me-2 text-primary" /> Excel/CSV डाउनलोड
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            )}
             {activeTab !== 'membership' && (
               <Button onClick={openAddModal} className="btn-add">
                 <Plus size={18} /> नयाँ थप्नुहोस्
@@ -293,6 +487,80 @@ const AdminPanel = ({ token, onLogout }) => {
         </header>
 
         <div className="admin-content-card">
+          {activeTab === 'membership' && (
+            <Row className="g-4 mb-4 p-4 pb-0">
+              <Col md={4}>
+                <div className="stat-card p-3 bg-primary-subtle text-primary rounded-3 border-0 d-flex align-items-center">
+                  <div className="me-3 bg-primary text-white p-2 rounded-circle">
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <small className="d-block text-slate-500 uppercase tracking-wider x-small fw-bold">कुल सदस्य</small>
+                    <div className="fs-4 fw-bold">{stats.total}</div>
+                  </div>
+                </div>
+              </Col>
+              <Col md={4}>
+                <div className="stat-card p-3 bg-warning-subtle text-warning rounded-3 border-0 d-flex align-items-center">
+                  <div className="me-3 bg-warning text-white p-2 rounded-circle">
+                    <Calendar size={20} />
+                  </div>
+                  <div>
+                    <small className="d-block text-slate-500 uppercase tracking-wider x-small fw-bold">पेन्डिङ आवेदन</small>
+                    <div className="fs-4 fw-bold">{stats.pending}</div>
+                  </div>
+                </div>
+              </Col>
+              <Col md={4}>
+                <div className="stat-card p-3 bg-success-subtle text-success rounded-3 border-0 d-flex align-items-center">
+                  <div className="me-3 bg-success text-white p-2 rounded-circle">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <div>
+                    <small className="d-block text-slate-500 uppercase tracking-wider x-small fw-bold">अनुमोदित सदस्य</small>
+                    <div className="fs-4 fw-bold">{stats.approved}</div>
+                  </div>
+                </div>
+              </Col>
+            </Row>
+          )}
+
+          {activeTab === 'membership' && (
+            <div className="p-4 py-3 border-bottom bg-slate-50 d-flex flex-column flex-md-row gap-3">
+              <div className="flex-grow-1">
+                <Form.Control 
+                  placeholder="नाम वा इमेलबाट खोज्नुहोस्..." 
+                  className="form-input-samaj py-2"
+                  value={filters.searchTerm}
+                  onChange={e => setFilters({...filters, searchTerm: e.target.value})}
+                />
+              </div>
+              <div className="d-flex gap-2">
+                <Form.Select 
+                  className="form-input-samaj py-2" 
+                  style={{ width: '150px' }}
+                  value={filters.status}
+                  onChange={e => setFilters({...filters, status: e.target.value})}
+                >
+                  <option value="all">सबै अवस्था</option>
+                  <option value="pending">पेन्डिङ</option>
+                  <option value="approved">अनुमोदित</option>
+                </Form.Select>
+                <Form.Select 
+                  className="form-input-samaj py-2" 
+                  style={{ width: '150px' }}
+                  value={filters.period}
+                  onChange={e => setFilters({...filters, period: e.target.value})}
+                >
+                  <option value="all">सबै समय</option>
+                  <option value="today">आजको मात्र</option>
+                  <option value="week">यो हप्ता</option>
+                  <option value="month">यो महिना</option>
+                </Form.Select>
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="p-5 text-center text-slate-400">डाटा लोड हुँदैछ...</div>
           ) : (
@@ -304,6 +572,7 @@ const AdminPanel = ({ token, onLogout }) => {
                       <th>आवेदकको विवरण</th>
                       <th>सम्पर्क विवरण</th>
                       <th>पेशा र ठेगाना</th>
+                      <th>आवेदन मिति</th>
                       <th>अवस्था</th>
                     </>
                   )}
@@ -329,12 +598,12 @@ const AdminPanel = ({ token, onLogout }) => {
                 </tr>
               </thead>
               <tbody>
-                {data[activeTab].length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="text-center p-5 text-slate-400">कुनै रेकर्ड फेला परेन</td>
                   </tr>
                 ) : (
-                  data[activeTab].map(item => (
+                  filteredItems.map(item => (
                     <tr key={item.id}>
                       {activeTab === 'membership' && (
                         <>
@@ -353,6 +622,9 @@ const AdminPanel = ({ token, onLogout }) => {
                             <div className="small fw-bold">{item.occupation}</div>
                             <div className="x-small text-slate-400">{item.company}</div>
                             <div className="x-small text-slate-400">Nepal: {item.address_nepal}</div>
+                          </td>
+                          <td className="small text-slate-500">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
                           </td>
                           <td>
                             <span className={`status-badge ${item.status}`}>
@@ -385,15 +657,37 @@ const AdminPanel = ({ token, onLogout }) => {
                       )}
                       <td className="text-end">
                         <div className="d-flex justify-content-end gap-2">
-                          {activeTab === 'membership' && item.status === 'pending' && (
-                            <Button 
-                              variant="outline-success" 
-                              size="sm" 
-                              className="rounded-pill px-3"
-                              onClick={() => handleApprove(item.id)}
-                            >
-                              अनुमोदन गर्नुहोस्
-                            </Button>
+                          {activeTab === 'membership' && (
+                            <>
+                              <Button 
+                                variant="link" 
+                                size="sm" 
+                                onClick={() => handleViewDetails(item)}
+                                className="text-info"
+                                title="विवरण हेर्नुहोस्"
+                              >
+                                <Eye size={18} />
+                              </Button>
+                              <Button 
+                                variant="link" 
+                                size="sm" 
+                                onClick={() => handleEdit(item)}
+                                className="text-primary"
+                                title="सम्पादन गर्नुहोस्"
+                              >
+                                <Edit size={18} />
+                              </Button>
+                              {item.status === 'pending' && (
+                                <Button 
+                                  variant="outline-success" 
+                                  size="sm" 
+                                  className="rounded-pill px-3"
+                                  onClick={() => handleApprove(item.id)}
+                                >
+                                  अनुमोदन
+                                </Button>
+                              )}
+                            </>
                           )}
                           {activeTab !== 'membership' && (
                             <Button 
@@ -406,10 +700,14 @@ const AdminPanel = ({ token, onLogout }) => {
                           )}
                           <Button 
                             variant="link" 
-                            onClick={() => handleDelete(item.id)} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id);
+                            }} 
                             className="btn-action-delete"
+                            title="हटाउनुहोस्"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={18} style={{ pointerEvents: 'none' }} />
                           </Button>
                         </div>
                       </td>
@@ -422,12 +720,80 @@ const AdminPanel = ({ token, onLogout }) => {
         </div>
 
         {/* Add Modal */}
-        <Modal show={showModal} onHide={() => setShowModal(false)} centered className="admin-modal" size={activeTab === 'news' ? 'lg' : undefined}>
+        <Modal show={showModal} onHide={() => setShowModal(false)} centered className="admin-modal" size={activeTab === 'news' || activeTab === 'membership' ? 'lg' : undefined}>
           <Modal.Header closeButton>
-            <Modal.Title>{isEditing ? 'सम्पादन गर्नुहोस्' : 'नयाँ सिर्जना गर्नुहोस्'} {activeTab === 'news' ? 'समाचार' : activeTab === 'gallery' ? 'ग्यालरी' : 'साझेदार'}</Modal.Title>
+            <Modal.Title>{isEditing ? 'सम्पादन गर्नुहोस्' : 'नयाँ सिर्जना गर्नुहोस्'} {activeTab === 'membership' ? 'सदस्य विवरण' : activeTab === 'news' ? 'समाचार' : activeTab === 'gallery' ? 'ग्यालरी' : 'साझेदार'}</Modal.Title>
           </Modal.Header>
           <Form onSubmit={handleSubmit}>
             <Modal.Body>
+              {activeTab === 'membership' && (
+                <Row className="g-3">
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>पूरा नाम</Form.Label>
+                      <Form.Control required className="form-input-samaj" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>इमेल</Form.Label>
+                      <Form.Control required type="email" className="form-input-samaj" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>फोन नम्बर</Form.Label>
+                      <Form.Control required className="form-input-samaj" value={formData.phone || ''} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>लिङ्ग</Form.Label>
+                      <Form.Select className="form-input-samaj" value={formData.gender || ''} onChange={e => setFormData({...formData, gender: e.target.value})}>
+                        <option value="Male">पुरुष</option>
+                        <option value="Female">महिला</option>
+                        <option value="Other">अन्य</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>जन्म मिति</Form.Label>
+                      <Form.Control type="date" className="form-input-samaj" value={formData.dob || ''} onChange={e => setFormData({...formData, dob: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>रक्त समूह</Form.Label>
+                      <Form.Control className="form-input-samaj" value={formData.blood_group || ''} onChange={e => setFormData({...formData, blood_group: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>पेशा</Form.Label>
+                      <Form.Control className="form-input-samaj" value={formData.occupation || ''} onChange={e => setFormData({...formData, occupation: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>कम्पनी</Form.Label>
+                      <Form.Control className="form-input-samaj" value={formData.company || ''} onChange={e => setFormData({...formData, company: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={12}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>UAE ठेगाना</Form.Label>
+                      <Form.Control className="form-input-samaj" value={formData.address_uae || ''} onChange={e => setFormData({...formData, address_uae: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                  <Col md={12}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>नेपालको ठेगाना</Form.Label>
+                      <Form.Control className="form-input-samaj" value={formData.address_nepal || ''} onChange={e => setFormData({...formData, address_nepal: e.target.value})} />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              )}
               {activeTab === 'news' && (
                 <>
                   <Form.Group className="mb-3">
@@ -586,6 +952,134 @@ const AdminPanel = ({ token, onLogout }) => {
             </Modal.Footer>
           </Form>
         </Modal>
+
+        {/* Detail Modal */}
+        <Modal show={showDetailModal} onHide={() => setShowDetailModal(false)} centered size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>सदस्यको विस्तृत विवरण</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {selectedItem && (
+              <div id="printable-member-card" className="p-4 bg-white">
+                <div className="text-center mb-4 border-bottom pb-4">
+                  <div className="bg-primary text-white d-inline-block p-3 rounded-circle mb-3">
+                    <UserPlus size={40} />
+                  </div>
+                  <h3 className="font-serif fw-bold text-primary mb-1">नेपाल क्षेत्री समाज युएई</h3>
+                  <p className="text-slate-500 small">सदस्यता आवेदन फारम</p>
+                </div>
+                
+                <Row className="g-4">
+                  <Col md={6}>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">पूरा नाम</label>
+                      <div className="fs-5 fw-bold">{selectedItem.name}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">इमेल</label>
+                      <div className="fs-6">{selectedItem.email}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">फोन नम्बर</label>
+                      <div className="fs-6">{selectedItem.phone}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">लिङ्ग | जन्म मिति</label>
+                      <div className="fs-6">{selectedItem.gender} | {selectedItem.dob}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">रक्त समूह</label>
+                      <div className="fs-6">{selectedItem.blood_group || 'प्रमाणित छैन'}</div>
+                    </div>
+                  </Col>
+                  <Col md={6}>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">पेशा</label>
+                      <div className="fs-6">{selectedItem.occupation || 'N/A'}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">कम्पनी</label>
+                      <div className="fs-6">{selectedItem.company || 'N/A'}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">UAE ठेगाना</label>
+                      <div className="fs-6">{selectedItem.address_uae}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">नेपालको ठेगाना</label>
+                      <div className="fs-6">{selectedItem.address_nepal}</div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="small text-slate-400 uppercase tracking-wider fw-bold">अवस्था</label>
+                      <div>
+                        <Badge bg={selectedItem.status === 'approved' ? 'success' : 'warning'} className="px-3 py-2 rounded-pill">
+                          {selectedItem.status === 'approved' ? 'अनुमोदित (Approved)' : 'पेन्डिङ (Pending)'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Col>
+                </Row>
+                
+                <div className="mt-5 pt-4 border-top text-center text-slate-400 x-small">
+                  यो दस्तावेज नेपाल क्षेत्री समाज युएईको आधिकारिक रेकर्ड हो। {new Date().toLocaleDateString()} मा निकालिएको।
+                </div>
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailModal(false)}>बन्द गर्नुहोस्</Button>
+            <Button variant="primary" onClick={printMemberToPDF} disabled={printing}>
+              {printing ? 'प्रोसेसिङ...' : <><Printer size={18} className="me-2" /> PDF प्रिन्ट गर्नुहोस्</>}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Hidden Printable Table for Full List - Positioned off-screen so html2canvas can see it */}
+        <div style={{ position: 'absolute', top: '-9999px', left: '-9999px', opacity: 0 }}>
+          <div id="printable-members-list" className="p-5 bg-white" style={{ width: '210mm' }}>
+            <div className="text-center mb-5">
+              <h2 className="fw-bold text-primary mb-1">नेपाल क्षेत्री समाज युएई</h2>
+              <h4 className="text-slate-600 mb-0">आधिकारिक सदस्यहरूको सूची</h4>
+              <p className="small text-slate-400 mt-2">निकालेको मिति: {new Date().toLocaleDateString()}</p>
+            </div>
+            
+            <table className="table table-bordered border-dark w-100 mt-4">
+              <thead className="bg-light">
+                <tr>
+                  <th style={{ width: '50px' }}>क्र.सं.</th>
+                  <th>पूरा नाम</th>
+                  <th>सम्पर्क / इमेल</th>
+                  <th>जन्म मिति / सा. समूह</th>
+                  <th>UAE ठेगाना</th>
+                  <th>अवस्था</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.membership.map((m, idx) => (
+                  <tr key={m.id}>
+                    <td>{idx + 1}</td>
+                    <td><div className="fw-bold">{m.name}</div><div className="x-small">{m.occupation}</div></td>
+                    <td><div>{m.phone}</div><div className="x-small">{m.email}</div></td>
+                    <td>{m.dob} / {m.blood_group}</td>
+                    <td className="small">{m.address_uae}</td>
+                    <td className="small">{m.status === 'approved' ? 'Active' : 'Pending'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            
+            <div className="mt-5 pt-5 d-flex justify-content-between">
+              <div className="text-center" style={{ width: '150px' }}>
+                <div className="border-bottom border-dark mb-2"></div>
+                <div className="small">तयार गर्ने</div>
+              </div>
+              <div className="text-center" style={{ width: '150px' }}>
+                <div className="border-bottom border-dark mb-2"></div>
+                <div className="small">प्रमाणित गर्ने</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
