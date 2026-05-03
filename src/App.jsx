@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
+import { Routes, Route, useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import ReactQuill from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import NewsList from './pages/NewsList';
@@ -54,7 +54,21 @@ const API = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials)
-  }).then(res => res.json()),
+  }).then(async res => {
+    if (res.status === 401) {
+      throw new Error('प्रयोगकर्ता नाम वा पासवर्ड गलत छ।'); // Username or password is wrong in Nepali
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        throw new Error(json.message || `Error: ${res.status}`);
+      } catch (e) {
+        throw new Error(`Login failed with status ${res.status}`);
+      }
+    }
+    return res.json();
+  }),
 
   getNews: () => fetch('/api/news').then(res => res.json()),
   getGallery: () => fetch('/api/gallery').then(res => res.json()),
@@ -68,12 +82,27 @@ const API = {
   admin: {
     getMembership: (token) => fetch('/api/admin/membership', {
       headers: { 'Authorization': `Bearer ${token}` }
-    }).then(res => res.json()),
+    }).then(async res => {
+      if (!res.ok) {
+        const text = await res.text();
+        console.error(`API Error (${res.status}):`, text);
+        try {
+          const json = JSON.parse(text);
+          throw new Error(json.message || 'Failed to load membership');
+        } catch (e) {
+          throw new Error(`Server returned ${res.status}: ${text.slice(0, 50)}...`);
+        }
+      }
+      return res.json();
+    }),
     deleteMembership: (id, token) => fetch(`/api/admin/membership/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
-    }).then(res => {
-      if (!res.ok) throw new Error('Delete failed');
+    }).then(async res => {
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Delete failed (${res.status}): ${text.slice(0, 50)}`);
+      }
       return res.json();
     }),
     updateMembership: (id, data, token) => fetch(`/api/admin/membership/${id}`, {
@@ -367,16 +396,16 @@ const AdminPanel = ({ token, onLogout }) => {
   };
 
   const stats = {
-    total: data.membership.length,
-    pending: data.membership.filter(m => m.status === 'pending').length,
-    approved: data.membership.filter(m => m.status === 'approved').length
+    total: (data.membership || []).length,
+    pending: (data.membership || []).filter(m => m.status === 'pending').length,
+    approved: (data.membership || []).filter(m => m.status === 'approved').length
   };
 
-  const filteredItems = data[activeTab].filter(item => {
+  const filteredItems = (data[activeTab] || []).filter(item => {
     if (activeTab === 'membership') {
       const matchesStatus = filters.status === 'all' || item.status === filters.status;
-      const matchesSearch = item.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
-                            item.email.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      const matchesSearch = (item.name || '').toLowerCase().includes(filters.searchTerm.toLowerCase()) || 
+                            (item.email || '').toLowerCase().includes(filters.searchTerm.toLowerCase());
       
       let matchesPeriod = true;
       if (filters.period !== 'all' && item.created_at) {
@@ -459,7 +488,7 @@ const AdminPanel = ({ token, onLogout }) => {
             <p className="page-subtitle">आफ्नो सामुदायिक सामग्री व्यवस्थापन गर्नुहोस्</p>
           </div>
           <div className="header-right">
-            {activeTab === 'membership' && data.membership.length > 0 && (
+            {activeTab === 'membership' && (data.membership || []).length > 0 && (
               <Dropdown as={ButtonGroup} className="btn-add me-2">
                 <Button 
                   variant="outline-primary" 
@@ -1089,7 +1118,6 @@ export default function App() {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('adminToken'));
-  const [showLogin, setShowLogin] = useState(false);
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
   
@@ -1129,15 +1157,20 @@ export default function App() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await API.login(loginData);
-    if (res.token) {
-      localStorage.setItem('adminToken', res.token);
-      setToken(res.token);
-      setIsAdmin(true);
-      setShowLogin(false);
-      setLoginError('');
-    } else {
-      setLoginError('गलत प्रयोगकर्ता नाम वा पासवर्ड');
+    try {
+      const res = await API.login(loginData);
+      if (res.token) {
+        localStorage.setItem('adminToken', res.token);
+        setToken(res.token);
+        setIsAdmin(true);
+        setLoginError('');
+      } else {
+        setLoginError('प्रयोगकर्ता नाम वा पासवर्ड गलत छ।');
+      }
+    } catch (err) {
+      console.error("Login failed:", err);
+      // Use the error message from API service if it exists
+      setLoginError(err.message || 'लगइन गर्न असफल भयो। कृपया फेरि प्रयास गर्नुहोस्।');
     }
   };
 
@@ -1147,114 +1180,100 @@ export default function App() {
     setIsAdmin(false);
   };
 
-  if (isAdmin && token) {
-    return <AdminPanel token={token} onLogout={handleLogout} />;
-  }
-
   return (
     <Routes>
       <Route path="/" element={
-        <div className="samaj-website">
-          {/* Navigation */}
-          <Navbar 
-            expand="lg" 
-            fixed="top" 
-            collapseOnSelect
-            onToggle={(expanded) => setIsMenuOpen(expanded)}
-            className={`navbar-samaj ${scrolled || isMenuOpen ? 'scrolled shadow-sm' : 'navbar-transparent'}`}
-          >
-            <Container>
-              <Navbar.Brand href="#home" className="fw-bold">नेपाल क्षेत्री समाज युएई</Navbar.Brand>
-              <Navbar.Toggle aria-controls="samaj-nav" className="border-0 shadow-none">
-                <span className="navbar-toggler-icon"></span>
-              </Navbar.Toggle>
-              <Navbar.Collapse id="samaj-nav" className="justify-content-end">
-                <Nav className="align-items-center">
-                  <Nav.Link href="#home">गृहपृष्ठ</Nav.Link>
-                  <Nav.Link href="#about">हाम्रो बारेमा</Nav.Link>
-                  {news.length > 0 && <Nav.Link href="#news">समाचार</Nav.Link>}
-                  {gallery.length > 0 && <Nav.Link href="#gallery">ग्यालरी</Nav.Link>}
-                  {partners.length > 0 && <Nav.Link href="#partners">साझेदारहरू</Nav.Link>}
-                  <Nav.Link onClick={() => {
-                    navigate('/membership');
-                    setIsMenuOpen(false);
-                  }}>आबद्ध हुनुहोस्</Nav.Link>
-                  <Button 
-                    variant="link" 
-                    onClick={() => setShowLogin(true)} 
-                    className="nav-link text-primary fw-bold border-0 bg-transparent"
-                  >
-                    एडमिन
-                  </Button>
-                </Nav>
-              </Navbar.Collapse>
+        <Layout 
+          navigate={navigate} 
+          scrolled={scrolled} 
+          isMenuOpen={isMenuOpen} 
+          setIsMenuOpen={setIsMenuOpen} 
+          showBackToTop={showBackToTop}
+        >
+          {/* Hero Section */}
+          <section id="home" className="hero-section">
+            <Container className="h-100">
+              <Row className="h-100 align-items-center">
+                <Col lg={8}>
+                  <Fade direction="up" cascade damping={0.1} triggerOnce={true}>
+                    <h5 className="hero-eyebrow">संयुक्त अरब इमिरेट्स</h5>
+                    <h1 className="hero-title font-serif">नेपाल क्षेत्री समाज युएई</h1>
+                    <p className="hero-description fs-4">एकता, सम्मान र संस्कृति संरक्षणको साझा अभियान।</p>
+                    <div className="d-flex flex-wrap gap-3 mt-4">
+                       <Button 
+                         variant="primary" 
+                         size="lg" 
+                         className="btn-samaj-hero px-5 py-3 rounded-pill fw-bold shadow-lg"
+                         onClick={() => navigate('/membership')}
+                       >
+                         हाम्रो समाजमा आबद्ध हुनुहोस् <ArrowRight size={20} className="ms-2" />
+                       </Button>
+                       <Button 
+                         variant="outline-light" 
+                         size="lg" 
+                         className="px-5 py-3 rounded-pill fw-bold border-2"
+                         onClick={() => {
+                            document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+                         }}
+                       >
+                         हाम्रो बारेमा
+                       </Button>
+                    </div>
+                  </Fade>
+                </Col>
+              </Row>
             </Container>
-          </Navbar>
+            <div className="hero-scroll-indicator">
+              <div className="mouse"></div>
+            </div>
+          </section>
 
-      {/* Hero Section */}
-      <section id="home" className="hero-section">
-        <Container>
-          <Row>
-            <Col lg={8}>
-              <Fade direction="up" cascade damping={0.1} triggerOnce={true}>
-                <h1>संस्कृति संरक्षण, समुदाय सशक्तिकरण</h1>
-                <p className="mb-5">नेपाल क्षेत्री समाज युएईमा तपाईंलाई स्वागत छ। हामी युएईमा रहेका क्षेत्री समुदायलाई एकताबद्ध गर्न, हाम्रो समृद्ध सम्पदाको जगेर्ना गर्न र हाम्रा सदस्यहरूलाई सहयोग प्रदान गर्न समर्पित छौं।</p>
-                <div className="d-flex gap-3">
-                  <Button href="#membership" className="btn-samaj">हाम्रो समुदायमा जोडिनुहोस्</Button>
-                  <Button href="#about" variant="outline-light" className="rounded-pill px-5 py-3 border-2">हाम्रो कथा</Button>
-                </div>
-              </Fade>
-            </Col>
-          </Row>
-        </Container>
-      </section>
-
-      {/* Core Values / Features Section */}
-      <section className="py-5 bg-light relative z-10">
-        <Container>
-          <Row className="g-4 align-items-stretch">
-            <Col md={4} className="d-flex">
-              <Fade direction="up" delay={100} triggerOnce={true} className="w-100 d-flex">
-                <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4 flex-fill">
-                  <Card.Body className="text-center">
-                    <div className="feature-icon mb-4 bg-secondary/10 text-secondary rounded-circle d-inline-flex p-3">
-                      <ShieldCheck size={32} />
-                    </div>
-                    <h4 className="font-serif fw-bold mb-3">संस्कृति संरक्षण</h4>
-                    <p className="text-slate-500 mb-0">हामी हाम्रो समृद्ध सम्पदाको जगेर्ना गर्न र यसलाई भावी पुस्तामा हस्तान्तरण गर्न समर्पित छौं।</p>
-                  </Card.Body>
-                </Card>
-              </Fade>
-            </Col>
-            <Col md={4} className="d-flex">
-              <Fade direction="up" delay={200} triggerOnce={true} className="w-100 d-flex">
-                <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4 flex-fill">
-                  <Card.Body className="text-center">
-                    <div className="feature-icon mb-4 bg-primary/10 text-primary rounded-circle d-inline-flex p-3">
-                      <Users size={32} />
-                    </div>
-                    <h4 className="font-serif fw-bold mb-3">समुदाय सशक्तिकरण</h4>
-                    <p className="text-slate-500 mb-0">आपसी सहयोग र भ्रातृत्व मार्फत युएईमा क्षेत्री समुदायलाई एकताबद्ध गर्दै।</p>
-                  </Card.Body>
-                </Card>
-              </Fade>
-            </Col>
-            <Col md={4} className="d-flex">
-              <Fade direction="up" delay={300} triggerOnce={true} className="w-100 d-flex">
-                <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4 flex-fill">
-                  <Card.Body className="text-center">
-                    <div className="feature-icon mb-4 bg-dark/10 text-dark rounded-circle d-inline-flex p-3">
-                      <UserPlus size={32} />
-                    </div>
-                    <h4 className="font-serif fw-bold mb-3">हाम्रो समुदायमा जोडिनुहोस्</h4>
-                    <p className="text-slate-500 mb-0">आजै सदस्य बन्नुहोस् र विशेष लाभहरू र सहयोगी नेटवर्कमा पहुँच प्राप्त गर्नुहोस्।</p>
-                  </Card.Body>
-                </Card>
-              </Fade>
-            </Col>
-          </Row>
-        </Container>
-      </section>
+          {/* Features / Quick Access */}
+          <section className="section-padding bg-white relative z-10 -mt-20">
+            <Container>
+              <Row className="g-4 align-items-stretch">
+                <Col md={4} className="d-flex">
+                  <Fade direction="up" delay={100} triggerOnce={true} className="w-100 d-flex">
+                    <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4 flex-fill">
+                      <Card.Body className="text-center">
+                        <div className="feature-icon mb-4 bg-secondary/10 text-secondary rounded-circle d-inline-flex p-3">
+                          <ShieldCheck size={32} />
+                        </div>
+                        <h4 className="font-serif fw-bold mb-3">संस्कृति संरक्षण</h4>
+                        <p className="text-slate-500 mb-0">हामी हाम्रो समृद्ध सम्पदाको जगेर्ना गर्न र यसलाई भावी पुस्तामा हस्तान्तरण गर्न समर्पित छौं।</p>
+                      </Card.Body>
+                    </Card>
+                  </Fade>
+                </Col>
+                <Col md={4} className="d-flex">
+                  <Fade direction="up" delay={200} triggerOnce={true} className="w-100 d-flex">
+                    <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4 flex-fill">
+                      <Card.Body className="text-center">
+                        <div className="feature-icon mb-4 bg-primary/10 text-primary rounded-circle d-inline-flex p-3">
+                          <Users size={32} />
+                        </div>
+                        <h4 className="font-serif fw-bold mb-3">समुदाय सशक्तिकरण</h4>
+                        <p className="text-slate-500 mb-0">आपसी सहयोग र भ्रातृत्व मार्फत युएईमा क्षेत्री समुदायलाई एकताबद्ध गर्दै।</p>
+                      </Card.Body>
+                    </Card>
+                  </Fade>
+                </Col>
+                <Col md={4} className="d-flex">
+                  <Fade direction="up" delay={300} triggerOnce={true} className="w-100 d-flex">
+                    <Card className="feature-card h-100 border-0 shadow-lg rounded-4 p-4 flex-fill">
+                      <Card.Body className="text-center">
+                        <div className="feature-icon mb-4 bg-dark/10 text-dark rounded-circle d-inline-flex p-3">
+                          <UserPlus size={32} />
+                        </div>
+                        <h4 className="font-serif fw-bold mb-3">हाम्रो समुदायमा जोडिनुहोस्</h4>
+                        <p className="text-slate-500 mb-0">आजै सदस्य बन्नुहोस् र विशेष लाभहरू र सहयोगी नेटवर्कमा पहुँच प्राप्त गर्नुहोस्।</p>
+                      </Card.Body>
+                    </Card>
+                  </Fade>
+                </Col>
+              </Row>
+            </Container>
+          </section>
 
       {/* Partners Section */}
       {partners.length > 0 && (
@@ -1546,7 +1565,7 @@ export default function App() {
                     <Button 
                       variant="primary" 
                       onClick={() => navigate('/membership')} 
-                      className="rounded-pill px-5 py-3 fw-bold fs-5 shadow-lg d-inline-flex align-items-center justify-content-center gap-2"
+                      className="btn-samaj-hero px-5 py-3 rounded-pill fw-bold fs-5 d-inline-flex align-items-center justify-content-center gap-2"
                     >
                       अहिले नै फारम भर्नुहोस् <ArrowRight size={20} />
                     </Button>
@@ -1557,97 +1576,228 @@ export default function App() {
           </Row>
         </Container>
       </section>
-
-      {/* Footer */}
-      <footer className="footer-samaj py-5">
-        <Container>
-          <Row className="g-5">
-            <Col lg={4}>
-              <h3 className="font-serif mb-4">नेपाल क्षेत्री समाज युएई</h3>
-              <p className="mb-4">संयुक्त अरब इमिरेट्समा क्षेत्री समुदायका लागि एकता बढाउँदै र सम्पदा संरक्षण गर्दै।</p>
-              <div className="d-flex gap-3">
-                <a href="#" className="transition-colors"><Facebook /></a>
-                <a href="#" className="transition-colors"><Twitter /></a>
-                <a href="#" className="transition-colors"><Instagram /></a>
-              </div>
-            </Col>
-            <Col lg={2} md={6}>
-              <h5 className="fw-bold mb-4">नेभिगेसन</h5>
-              <Nav className="flex-column gap-2">
-                <Nav.Link href="#home" className="p-0">गृहपृष्ठ</Nav.Link>
-                <Nav.Link href="#about" className="p-0">हाम्रो बारेमा</Nav.Link>
-                <Nav.Link href="#news" className="p-0">समाचार</Nav.Link>
-                <Nav.Link onClick={() => navigate('/membership')} className="p-0 pointer">आबद्ध हुनुहोस्</Nav.Link>
-              </Nav>
-            </Col>
-            <Col lg={3} md={6}>
-              <h5 className="fw-bold mb-4">सम्पर्क जानकारी</h5>
-              <div className="d-flex flex-column gap-3">
-                <div className="d-flex align-items-center gap-3"><MapPin size={18} /> दुबई, युएई</div>
-                <div className="d-flex align-items-center gap-3"><Phone size={18} /> +९७१ ५० ००० ००००</div>
-                <div className="d-flex align-items-center gap-3"><Mail size={18} /> info@chettrizamajuae.com</div>
-              </div>
-            </Col>
-            <Col lg={3}>
-              <h5 className="fw-bold mb-4">न्युजलेटर</h5>
-              <Form className="d-flex gap-2">
-                <Form.Control placeholder="इमेल" className="bg-white/10 border-0 text-white rounded-pill px-4" />
-                <Button className="btn-samaj p-2 rounded-circle"><ArrowRight size={20} /></Button>
-              </Form>
-            </Col>
-          </Row>
-          <hr className="border-white/10 my-5" />
-          <div className="text-center small">
-            &copy; {new Date().getFullYear()} नेपाल क्षेत्री समाज युएई। सबै अधिकार सुरक्षित।
-          </div>
-        </Container>
-      </footer>
-
-      {/* Back to Top Button */}
-      {showBackToTop && (
-        <Button 
-          className="back-to-top"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        </Layout>
+      } />
+      <Route path="/news" element={<Layout navigate={navigate} scrolled={scrolled} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} showBackToTop={showBackToTop}><NewsList /></Layout>} />
+      <Route path="/news/:id" element={
+        <Layout 
+          navigate={navigate} 
+          scrolled={scrolled} 
+          isMenuOpen={isMenuOpen} 
+          setIsMenuOpen={setIsMenuOpen} 
+          showBackToTop={showBackToTop}
         >
-          <ArrowUp size={24} />
-        </Button>
-      )}
-
-      {/* Login Modal (Inside Home Page or global? Putting it inside Home for now or keeping it in the div) */}
-      <Modal show={showLogin} onHide={() => setShowLogin(false)} centered>
-        <Modal.Body className="p-5">
-          <div className="text-center mb-4">
-            <ShieldCheck size={48} className="text-primary mb-3" />
-            <h3 className="font-serif">एडमिन लगइन</h3>
-            <p className="text-slate-500">व्यवस्थापन पोर्टलमा पहुँच गर्नुहोस्</p>
-          </div>
-          {loginError && <Alert variant="danger" className="py-2 small">{loginError}</Alert>}
-          <Form onSubmit={handleLogin}>
-            <Form.Group className="mb-3">
-              <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">प्रयोगकर्ता नाम</Form.Label>
-              <Form.Control 
-                required 
-                className="bg-slate-50 form-input-samaj py-3 rounded-3"
-                onChange={e => setLoginData({...loginData, username: e.target.value})}
-              />
-            </Form.Group>
-            <Form.Group className="mb-4">
-              <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">पासवर्ड</Form.Label>
-              <Form.Control 
-                type="password" 
-                required 
-                className="bg-slate-50 form-input-samaj py-3 rounded-3"
-                onChange={e => setLoginData({...loginData, password: e.target.value})}
-              />
-            </Form.Group>
-            <Button type="submit" className="btn-samaj w-100 py-3">ड्यासबोर्डमा लगइन गर्नुहोस्</Button>
-          </Form>
-        </Modal.Body>
-      </Modal>
-    </div>} />
-      <Route path="/news" element={<NewsList />} />
-      <Route path="/news/:id" element={<NewsDetail />} />
-      <Route path="/membership" element={<MembershipPage />} />
+          <NewsDetail />
+        </Layout>
+      } />
+      <Route path="/membership" element={<Layout navigate={navigate} scrolled={scrolled} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} showBackToTop={showBackToTop}><MembershipPage /></Layout>} />
+      <Route path="/admin" element={<AdminRoute isAdmin={isAdmin} token={token} handleLogin={handleLogin} loginData={loginData} setLoginData={setLoginData} loginError={loginError} handleLogout={handleLogout} navigate={navigate} />} />
     </Routes>
   );
 }
+
+const MainNavbar = ({ navigate, scrolled, isMenuOpen, setIsMenuOpen }) => {
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  
+  return (
+    <Navbar 
+      expand="lg" 
+      fixed="top" 
+      collapseOnSelect
+      onToggle={(expanded) => setIsMenuOpen(expanded)}
+      className={`navbar-samaj ${(!isHome || scrolled || isMenuOpen) ? 'scrolled shadow-sm' : 'navbar-transparent'}`}
+    >
+      <Container>
+        <Navbar.Brand onClick={() => navigate('/')} className="d-flex align-items-center gap-3 cursor-pointer">
+          <div className="navbar-logo-container">
+            <img src="https://chettrizamajuae.com/wp-content/uploads/2023/11/logo-1.png" alt="Samaj Logo" className="navbar-logo" referrerPolicy="no-referrer" />
+          </div>
+          <div className="brand-text d-none d-md-block">
+            <div className="brand-name h6 mb-0 fw-bold">नेपाल क्षेत्री समाज युएई</div>
+            <div className="brand-subtext text-uppercase tracking-widest x-small opacity-80">Nepal Chettri Samaj UAE</div>
+          </div>
+        </Navbar.Brand>
+        
+        <Navbar.Toggle aria-controls="basic-navbar-nav" className="navbar-toggler-samaj border-0 shadow-none">
+          <span className="navbar-toggler-icon-custom"></span>
+        </Navbar.Toggle>
+        
+        <Navbar.Collapse id="basic-navbar-nav">
+          <Nav className="ms-auto align-items-lg-center gap-2 py-3 py-lg-0">
+            <Nav.Link onClick={() => { 
+              if (isHome) {
+                document.getElementById('home')?.scrollIntoView({behavior:'smooth'});
+              } else {
+                navigate('/');
+                setTimeout(() => document.getElementById('home')?.scrollIntoView({behavior:'smooth'}), 100);
+              }
+            }} className="nav-link-samaj">गृहपृष्ठ</Nav.Link>
+            
+            <Nav.Link onClick={() => { 
+              if (isHome) {
+                document.getElementById('about')?.scrollIntoView({behavior:'smooth'});
+              } else {
+                navigate('/');
+                setTimeout(() => document.getElementById('about')?.scrollIntoView({behavior:'smooth'}), 100);
+              }
+            }} className="nav-link-samaj">हाम्रो बारेमा</Nav.Link>
+            
+            <Nav.Link onClick={() => { 
+              if (isHome) {
+                document.getElementById('news')?.scrollIntoView({behavior:'smooth'});
+              } else {
+                navigate('/');
+                setTimeout(() => document.getElementById('news')?.scrollIntoView({behavior:'smooth'}), 100);
+              }
+            }} className="nav-link-samaj">समाचार</Nav.Link>
+            
+            <Nav.Link onClick={() => { 
+              if (isHome) {
+                document.getElementById('gallery')?.scrollIntoView({behavior:'smooth'});
+              } else {
+                navigate('/');
+                setTimeout(() => document.getElementById('gallery')?.scrollIntoView({behavior:'smooth'}), 100);
+              }
+            }} className="nav-link-samaj">ग्यालरी</Nav.Link>
+            
+            <Nav.Link onClick={() => { 
+              if (isHome) {
+                document.getElementById('partners')?.scrollIntoView({behavior:'smooth'});
+              } else {
+                navigate('/');
+                setTimeout(() => document.getElementById('partners')?.scrollIntoView({behavior:'smooth'}), 100);
+              }
+            }} className="nav-link-samaj">साझेदारहरू</Nav.Link>
+            
+            <div className="ms-lg-3 d-flex flex-column flex-lg-row gap-3 mt-3 mt-lg-0">
+              <Button 
+                variant="primary" 
+                className="btn-samaj-nav fw-bold rounded-pill px-4 py-2 shadow-sm d-flex align-items-center justify-content-center gap-2"
+                onClick={() => navigate('/membership')}
+              >
+                <UserPlus size={18} /> आबद्ध हुनुहोस्
+              </Button>
+            </div>
+          </Nav>
+        </Navbar.Collapse>
+      </Container>
+    </Navbar>
+  );
+};
+
+const LoginPage = ({ handleLogin, loginData, setLoginData, loginError, navigate }) => (
+  <div className="login-page-wrapper py-5 mt-5">
+    <Container>
+      <Row className="justify-content-center">
+        <Col md={6} lg={4}>
+          <div className="bg-white p-5 rounded-4 shadow-xl border border-slate-100">
+            <div className="text-center mb-4">
+              <div className="admin-login-icon mb-3 mx-auto">
+                <ShieldCheck size={48} className="text-primary" />
+              </div>
+              <h3 className="font-serif fw-bold">एडमिन पोर्टल</h3>
+              <p className="text-slate-500">व्यवस्थापन ड्यासबोर्डमा पहुँच गर्नुहोस्</p>
+            </div>
+            {loginError && <Alert variant="danger" className="py-2 small">{loginError}</Alert>}
+            <Form onSubmit={handleLogin}>
+              <Form.Group className="mb-3">
+                <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">प्रयोगकर्ता नाम</Form.Label>
+                <Form.Control 
+                  required 
+                  className="bg-slate-50 form-input-samaj py-3 rounded-3"
+                  onChange={e => setLoginData({...loginData, username: e.target.value})}
+                />
+              </Form.Group>
+              <Form.Group className="mb-4">
+                <Form.Label className="small fw-bold uppercase tracking-wider text-slate-400">पासवर्ड</Form.Label>
+                <Form.Control 
+                  type="password" 
+                  required 
+                  className="bg-slate-50 form-input-samaj py-3 rounded-3"
+                  onChange={e => setLoginData({...loginData, password: e.target.value})}
+                />
+              </Form.Group>
+              <Button type="submit" className="btn-samaj w-100 py-3 shadow-sm">लगइन गर्नुहोस्</Button>
+            </Form>
+            <div className="mt-4 text-center">
+              <Button variant="link" onClick={() => navigate('/')} className="text-slate-400 text-decoration-none small">
+                <ArrowRight size={14} className="rotate-180 me-1" /> गृहपृष्ठमा फर्कनुहोस्
+              </Button>
+            </div>
+          </div>
+        </Col>
+      </Row>
+    </Container>
+  </div>
+);
+
+const MainFooter = ({ navigate }) => (
+  <footer className="footer-samaj py-5">
+    <Container>
+      <Row className="g-5">
+        <Col lg={4}>
+          <h3 className="font-serif mb-4">नेपाल क्षेत्री समाज युएई</h3>
+          <p className="mb-4">संयुक्त अरब इमिरेट्समा क्षेत्री समुदायका लागि एकता बढाउँदै र सम्पदा संरक्षण गर्दै।</p>
+          <div className="d-flex gap-3">
+            <a href="#" className="transition-colors"><Facebook /></a>
+            <a href="#" className="transition-colors"><Twitter /></a>
+            <a href="#" className="transition-colors"><Instagram /></a>
+          </div>
+        </Col>
+        <Col lg={2} md={6}>
+          <h5 className="fw-bold mb-4">नेभिगेसन</h5>
+          <Nav className="flex-column gap-2">
+            <Nav.Link onClick={() => navigate('/')} className="p-0 pointer text-white">गृहपृष्ठ</Nav.Link>
+            <Nav.Link onClick={() => { navigate('/'); setTimeout(() => document.getElementById('about')?.scrollIntoView({behavior:'smooth'}), 100); }} className="p-0 pointer text-white">हाम्रो बारेमा</Nav.Link>
+            <Nav.Link onClick={() => { navigate('/'); setTimeout(() => document.getElementById('news')?.scrollIntoView({behavior:'smooth'}), 100); }} className="p-0 pointer text-white">समाचार</Nav.Link>
+            <Nav.Link onClick={() => navigate('/membership')} className="p-0 pointer text-white">आबद्ध हुनुहोस्</Nav.Link>
+          </Nav>
+        </Col>
+        <Col lg={3} md={6}>
+          <h5 className="fw-bold mb-4">सम्पर्क जानकारी</h5>
+          <div className="d-flex flex-column gap-3">
+            <div className="d-flex align-items-center gap-3"><MapPin size={18} /> दुबई, युएई</div>
+            <div className="d-flex align-items-center gap-3"><Phone size={18} /> +९७१ ५० ००० ००००</div>
+            <div className="d-flex align-items-center gap-3"><Mail size={18} /> info@chettrizamajuae.com</div>
+          </div>
+        </Col>
+        <Col lg={3}>
+          <h5 className="fw-bold mb-4">न्युजलेटर</h5>
+          <Form className="d-flex gap-2">
+            <Form.Control placeholder="इमेल" className="bg-white/10 border-0 text-white rounded-pill px-4" />
+            <Button className="btn-samaj p-2 rounded-circle"><ArrowRight size={20} /></Button>
+          </Form>
+        </Col>
+      </Row>
+      <hr className="border-white/10 my-5" />
+      <div className="text-center small">
+        &copy; {new Date().getFullYear()} नेपाल क्षेत्री समाज युएई। सबै अधिकार सुरक्षित।
+      </div>
+    </Container>
+  </footer>
+);
+
+const Layout = ({ children, navigate, scrolled, isMenuOpen, setIsMenuOpen, showBackToTop }) => (
+  <div className="samaj-website">
+    <MainNavbar navigate={navigate} scrolled={scrolled} isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
+    {children}
+    <MainFooter navigate={navigate} />
+    {/* Back to Top Button */}
+    {showBackToTop && (
+      <Button 
+        className="back-to-top"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      >
+        <ArrowUp size={24} />
+      </Button>
+    )}
+  </div>
+);
+
+const AdminRoute = ({ isAdmin, token, handleLogin, loginData, setLoginData, loginError, handleLogout, navigate }) => {
+  if (isAdmin && token) {
+    return <AdminPanel token={token} onLogout={handleLogout} />;
+  }
+  return <LoginPage handleLogin={handleLogin} loginData={loginData} setLoginData={setLoginData} loginError={loginError} navigate={navigate} />;
+};

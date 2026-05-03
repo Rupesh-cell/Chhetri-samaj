@@ -173,8 +173,154 @@ body {
 
 .navbar-samaj .navbar-brand {
   font-family: var(--font-serif);
+  padding: 0;
+}
+
+.navbar-logo-container {
+  height: 48px;
+  width: 48px;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.navbar-logo-container:hover {
+  transform: scale(1.08) rotate(3deg);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+.navbar-logo {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
+.brand-name {
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
   font-weight: 700;
-  font-size: 1.5rem;
+}
+
+.brand-subtext {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+@media (min-width: 1200px) {
+  .brand-name {
+    font-size: 1.25rem;
+  }
+}
+
+.navbar-transparent .brand-name,
+.navbar-transparent .brand-subtext {
+  color: #fff !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.navbar-samaj.scrolled .brand-name {
+  color: var(--color-dark) !important;
+}
+
+.navbar-samaj.scrolled .brand-subtext {
+  color: var(--color-primary) !important;
+}
+
+.navbar-toggler-samaj {
+  background: rgba(255,255,255,0.1);
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.navbar-toggler-samaj:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.scrolled .navbar-toggler-samaj {
+  background: rgba(0,0,0,0.03);
+}
+
+.scrolled .navbar-toggler-samaj:hover {
+  background: rgba(0,0,0,0.08);
+}
+
+.btn-samaj-nav {
+  padding: 0.6rem 1.75rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  box-shadow: 0 4px 15px rgba(201, 153, 107, 0.2);
+  border: none !important;
+  background-color: var(--color-primary) !important;
+  color: white !important;
+}
+
+.btn-samaj-nav:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(201, 153, 107, 0.35);
+  filter: brightness(0.9);
+}
+
+.btn-samaj-nav:active {
+  transform: translateY(0);
+}
+
+.btn-samaj-hero {
+  padding: 1rem 3rem;
+  font-size: 1.1rem;
+  letter-spacing: 0.01em;
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+  box-shadow: 0 10px 25px rgba(201, 153, 107, 0.3);
+  border: none !important;
+  background: var(--color-primary) !important;
+  color: white !important;
+}
+
+.btn-samaj-hero:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(201, 153, 107, 0.45);
+  filter: brightness(0.9);
+}
+
+.btn-samaj-hero:active {
+  transform: translateY(-1px);
+}
+
+.login-page-wrapper {
+  background: #f8fafc;
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+}
+
+.admin-login-icon {
+  width: 80px;
+  height: 80px;
+  background: rgba(201, 153, 107, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-input-samaj:focus {
+  background: #fff !important;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(201, 153, 107, 0.1);
 }
 
 .navbar-samaj .nav-link {
@@ -249,10 +395,26 @@ body {
     filter: brightness(0) invert(1);
   }
 
+  .navbar-toggler-icon-custom {
+    display: inline-block;
+    width: 24px;
+    height: 18px;
+    background-image: linear-gradient(to bottom, #fff 2px, transparent 2px, transparent 8px, #fff 8px, transparent 8px, transparent 14px, #fff 14px);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    transition: all 0.3s ease;
+  }
+
+  .scrolled .navbar-toggler-icon-custom {
+    background-image: linear-gradient(to bottom, var(--color-dark) 2px, transparent 2px, transparent 8px, var(--color-dark) 8px, transparent 8px, transparent 14px, var(--color-dark) 14px);
+  }
+
   .navbar-collapse {
     padding: 1rem 0;
   }
 }
+
+.cursor-pointer { cursor: pointer; }
 
 .navbar-samaj .navbar-toggler:focus,
 .navbar-samaj .nav-link:focus {

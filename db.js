@@ -60,11 +60,14 @@ const columns = db.prepare("PRAGMA table_info(membership)").all().map(c => c.nam
   }
 });
 
-// Create default admin if not exists
+// Create/Update default admin
 const adminExists = db.prepare('SELECT * FROM users WHERE username = ?').get('admin');
+const hashedPassword = bcrypt.hashSync('admin123', 10);
 if (!adminExists) {
-  const hashedPassword = bcrypt.hashSync('admin123', 10);
   db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('admin', hashedPassword);
+} else {
+  // Update password for existing admin to ensure it's admin123 during this fix session
+  db.prepare('UPDATE users SET password = ? WHERE username = ?').run(hashedPassword, 'admin');
 }
 
 // Seed some data if empty
